@@ -1,0 +1,420 @@
+/* ============================================================
+   SonicRise Cinematic Studio — Global Design System
+   Stack: Next.js 16 · Tailwind v4 · Framer Motion · Lucide
+   ============================================================ */
+
+@import "tailwindcss";
+
+/* Load design-token config (Tailwind v4 @config directive).
+   Theme tokens defined in tailwind.config.ts become utilities here. */
+@config "../../tailwind.config.ts";
+
+/* ─── Dark-mode variant (class strategy) ────────────────────────────────────
+   Enables `dark:` utilities when the `<html>` element has class="dark".
+   The html element always carries this class (see layout.tsx), enforcing
+   the strict dark aesthetic across the entire app.                         */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ─── Base layer ─────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    background-color: #0B0B0F;
+    overflow-x: hidden;
+    /* Smooth scrolling for anchor navigation */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: #0B0B0F;
+    color: #E4E1EC;
+    font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headline hierarchy — always Sora */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sora), sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  /* Code & technical output — always JetBrains Mono */
+  code, kbd, samp, pre {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+  }
+
+  /* Remove default list styling */
+  ul, ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Focusable elements: purple ring instead of browser default */
+  :focus-visible {
+    outline: 2px solid #7C3AED;
+    outline-offset: 2px;
+  }
+
+  /* Scrollbar — dark + accent */
+  ::-webkit-scrollbar              { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track        { background: #0B0B0F; }
+  ::-webkit-scrollbar-thumb        { background: #47464B; border-radius: 999px; }
+  ::-webkit-scrollbar-thumb:hover  { background: #7C3AED; }
+
+  /* Selection highlight */
+  ::selection {
+    background: rgba(124, 58, 237, 0.35);
+    color: #E4E1EC;
+  }
+}
+
+/* ─── Component layer ────────────────────────────────────────────────────── */
+@layer components {
+  /* ── Layout container ──────────────────────────────────────────────────── */
+  .container-studio {
+    width: 100%;
+    max-width: 1440px;
+    margin-inline: auto;
+    padding-inline: 32px;
+  }
+
+  @media (max-width: 640px) {
+    .container-studio {
+      padding-inline: 16px;
+    }
+  }
+
+  /* ── Buttons ───────────────────────────────────────────────────────────── */
+
+  /* Primary: Electric Purple → Cyan glow on hover */
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    background-color: #7C3AED;
+    color: #ffffff;
+    font-family: var(--font-geist), sans-serif;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: box-shadow 0.2s ease, background-color 0.2s ease, transform 0.15s ease;
+    border: none;
+    text-decoration: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #6d28d9;
+    box-shadow: 0 0 24px -4px rgba(0, 212, 255, 0.45);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+  }
+
+  /* Secondary / Glass button */
+  .btn-glass {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #E4E1EC;
+    font-family: var(--font-geist), sans-serif;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    text-decoration: none;
+  }
+
+  .btn-glass:hover {
+    border-color: rgba(124, 58, 237, 0.5);
+    background: rgba(124, 58, 237, 0.08);
+    transform: translateY(-1px);
+  }
+
+  /* Ghost button */
+  .btn-ghost {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.5rem;
+    border-radius: 0.5rem;
+    background: transparent;
+    border: none;
+    color: rgba(228, 225, 236, 0.6);
+    font-family: var(--font-geist), sans-serif;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    cursor: pointer;
+    text-decoration: none;
+    transition: color 0.2s ease;
+    position: relative;
+  }
+
+  .btn-ghost::after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 1.5rem;
+    right: 1.5rem;
+    height: 1px;
+    background: #D4AF37;
+    transform: scaleX(0);
+    transform-origin: center;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-ghost:hover {
+    color: #E4E1EC;
+  }
+
+  .btn-ghost:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* ── Input fields ──────────────────────────────────────────────────────── */
+  .input-studio {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    background-color: #1A1A22;
+    border: 1px solid transparent;
+    color: #E4E1EC;
+    font-family: var(--font-geist), sans-serif;
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .input-studio::placeholder {
+    color: #929095;
+  }
+
+  .input-studio:focus {
+    border-color: #00D4FF;
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  }
+
+  select.input-studio {
+    cursor: pointer;
+  }
+
+  input[type="date"].input-studio::-webkit-calendar-picker-indicator {
+    filter: invert(0.55) sepia(0.1) saturate(1.2);
+    cursor: pointer;
+    opacity: 0.6;
+  }
+
+  input[type="date"].input-studio::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
+
+  /* ── Status / Chip tags ────────────────────────────────────────────────── */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.2rem 0.625rem;
+    border-radius: 999px;
+    font-family: var(--font-jetbrains), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .chip-success {
+    background: rgba(34, 197, 94, 0.12);
+    color: #4ade80;
+  }
+
+  .chip-warning {
+    background: rgba(212, 175, 55, 0.15);
+    color: #D4AF37;
+  }
+
+  .chip-error {
+    background: rgba(255, 180, 171, 0.12);
+    color: #FFB4AB;
+  }
+
+  .chip-info {
+    background: rgba(0, 212, 255, 0.1);
+    color: #00D4FF;
+  }
+
+  .chip-purple {
+    background: rgba(124, 58, 237, 0.15);
+    color: #c4b5fd;
+  }
+}
+
+/* ─── Utilities layer ────────────────────────────────────────────────────── */
+@layer utilities {
+  /* ── Glassmorphism ─────────────────────────────────────────────────────── */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  /* Slightly more opaque panel variant */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+
+  /* ── Emissive glows ────────────────────────────────────────────────────── */
+  .hero-glow  { box-shadow: 0 0 40px -10px rgba(124, 58, 237, 0.3); }
+  .cyan-glow  { box-shadow: 0 0 20px -5px  rgba(0, 212, 255, 0.3); }
+  .gold-glow  { box-shadow: 0 0 20px -5px  rgba(212, 175, 55, 0.3); }
+
+  /* ── Gradient text ─────────────────────────────────────────────────────── */
+  /* Purple → Cyan (hero / high-conversion moments) */
+  .gradient-text {
+    background: linear-gradient(45deg, #7C3AED, #00D4FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Gold shimmer (premium moments) */
+  .gradient-text-gold {
+    background: linear-gradient(45deg, #D4AF37, #f5d97a, #D4AF37);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Gradient backgrounds ──────────────────────────────────────────────── */
+  .gradient-brand {
+    background: linear-gradient(135deg, #7C3AED 0%, #00D4FF 100%);
+  }
+
+  .gradient-surface {
+    background: linear-gradient(180deg, #13131A 0%, #0B0B0F 100%);
+  }
+
+  /* Subtle radial purple glow behind hero sections */
+  .bg-hero-radial {
+    background:
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124, 58, 237, 0.2) 0%, transparent 70%),
+      #0B0B0F;
+  }
+
+  /* ── Micro-border (gradient top-left → bottom-right) ──────────────────── */
+  .micro-border {
+    position: relative;
+  }
+
+  .micro-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.15) 0%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* ── Typography helpers ────────────────────────────────────────────────── */
+
+  /* JetBrains Mono label — uppercase + wide tracking */
+  .label-mono {
+    font-family: var(--font-jetbrains), monospace;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #C8C5CB;
+  }
+
+  /* Section eyebrow label (monospace + purple dot decoration) */
+  .eyebrow {
+    font-family: var(--font-jetbrains), monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #7C3AED;
+  }
+
+  /* Tight headline tracking for display sizes */
+  .headline-tight { letter-spacing: -0.04em; }
+
+  /* ── Playback timeline ─────────────────────────────────────────────────── */
+  .timeline-bar {
+    height: 4px;
+    background: #00D4FF;
+    border-radius: 999px;
+  }
+
+  /* ── Shimmer loading skeleton ──────────────────────────────────────────── */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #1A1A22 25%,
+      #292932 50%,
+      #1A1A22 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  /* ── Cinematic overlay (bottom-to-transparent on images) ──────────────── */
+  .image-cinematic-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      to top,
+      rgba(11, 11, 15, 0.85) 0%,
+      rgba(11, 11, 15, 0.4)  35%,
+      transparent 70%
+    );
+    pointer-events: none;
+  }
+}
