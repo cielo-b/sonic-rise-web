@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 /** Studio-local date/time ↔ instants, using the studio's IANA time zone. */
 
 function partsIn(instant: Date, timeZone: string) {
@@ -62,4 +64,10 @@ export function minutesOf(hhmm: string): number {
 
 export function hhmm(minutes: number): string {
   return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`
+}
+
+/** "Now" captured once per mount — render must not call Date.now() directly. */
+export function useNow(): number {
+  const [now] = useState(() => Date.now())
+  return now
 }
