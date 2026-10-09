@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { usePathname } from 'next/navigation'
 import { api, ApiError, studioSlug, type StudioProfile } from '@/lib/api'
 
 interface StudioValue {
@@ -28,13 +29,15 @@ export function StudioProvider({ children }: { children: React.ReactNode }) {
     staleTime: 60_000,
   })
   const studio = q.data ?? null
+  const pathname = usePathname()
 
   useEffect(() => {
     const root = document.documentElement
     if (studio?.primaryColor) root.style.setProperty('--brand', studio.primaryColor)
     if (studio?.accentColor) root.style.setProperty('--accent', studio.accentColor)
+    // Re-applied on every navigation: page metadata would otherwise reset it.
     if (studio?.name) document.title = studio.name
-  }, [studio])
+  }, [studio, pathname])
 
   return (
     <StudioContext.Provider

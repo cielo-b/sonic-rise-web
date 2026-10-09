@@ -111,7 +111,7 @@ function Website() {
       <div className="max-w-3xl space-y-4">
         {tab === 'home' && (
           <>
-            <Field label="Headline" hint="Defaults to the studio name"><Input value={c.heroTitle ?? ''} onChange={(e) => set({ heroTitle: e.target.value })} maxLength={120} /></Field>
+            <Field label="Headline" hint="Defaults to the studio name. Wrap words in *asterisks* to make them glow, e.g. Where *Sound* Meets Vision"><Input value={c.heroTitle ?? ''} onChange={(e) => set({ heroTitle: e.target.value })} maxLength={120} /></Field>
             <Field label="Sub-headline" hint="Defaults to the tagline"><Textarea rows={2} value={c.heroSubtitle ?? ''} onChange={(e) => set({ heroSubtitle: e.target.value })} maxLength={300} /></Field>
             <Field label="Background image"><ImageUpload value={c.heroImageUrl} onChange={(url) => set({ heroImageUrl: url ?? undefined })} /></Field>
             <p className="text-sm font-medium pt-4">Numbers to show off</p>
