@@ -1,6 +1,7 @@
 'use client'
 
 import { use, useState } from 'react'
+import { useNow } from '@/lib/time'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2 } from 'lucide-react'
@@ -22,13 +23,14 @@ export default function BookingDetail({ params }: { params: Promise<{ id: string
   const [cancelOpen, setCancelOpen] = useState(false)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
+  const now = useNow()
 
   if (q.isLoading) return <Loading />
   const b = q.data
   if (!b) return <ErrorState error={q.error} onRetry={() => q.refetch()} />
 
   const active = ['PENDING_DEPOSIT', 'PENDING', 'CONFIRMED'].includes(b.status)
-  const late = new Date(b.startsAt).getTime() - Date.now() < studio.cancellationHours * 3_600_000
+  const late = new Date(b.startsAt).getTime() - now < studio.cancellationHours * 3_600_000
   const depositDue = Math.max(0, b.depositAmount - b.amountPaid)
   const balanceDue = Math.max(0, b.totalAmount - b.amountPaid)
 
@@ -76,7 +78,7 @@ export default function BookingDetail({ params }: { params: Promise<{ id: string
           {b.notes && <p className="text-sm text-text-muted whitespace-pre-line border-t border-white/10 pt-3">{b.notes}</p>}
           {b.cancelReason && <p className="text-sm text-red-300">{b.cancelReason}</p>}
         </Card>
-        {active && new Date(b.startsAt) > new Date() && (
+        {active && new Date(b.startsAt).getTime() > now && (
           <Button variant="danger" onClick={() => setCancelOpen(true)}>{t('portal.cancelBooking')}</Button>
         )}
       </div>

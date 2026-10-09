@@ -147,7 +147,7 @@ export function RegisterForm({ onDone }: { onDone: (user: Me) => void }) {
     <form onSubmit={submit} className="space-y-4">
       <Field label={t('common.name')}><Input autoComplete="name" required minLength={2} value={form.name} onChange={set('name')} /></Field>
       <Field label={t('common.email')}><Input type="email" autoComplete="email" required value={form.email} onChange={set('email')} /></Field>
-      <Field label={t('common.phone')} hint="MTN / Airtel — used for mobile money payments">
+      <Field label={t('common.phone')} hint={t('auth.phoneHint')}>
         <Input type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} placeholder="+250 7XX XXX XXX" />
       </Field>
       <Field label={t('common.password')} hint={t('auth.passwordHint')}>

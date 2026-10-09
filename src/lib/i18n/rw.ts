@@ -124,6 +124,7 @@ export const rw: Partial<Record<MessageKey, string>> = {
   'auth.acceptPrivacy': 'Nemeye {link} kandi nemeye ko {studio} ikoresha amakuru yanjye mu gucunga imyanya nafashe.',
   'auth.privacyLink': 'politiki y’ibanga',
   'auth.marketing': 'Nohererezwe amakuru n’amatangazo (si ngombwa)',
+  'auth.phoneHint': 'MTN / Airtel — ikoreshwa mu kwishyura na Mobile Money',
   'auth.passwordHint': 'Nibura inyuguti 8',
   'auth.twoFaTitle': 'Igenzura ry’intambwe ebyiri',
   'auth.twoFaSub': 'Andika kode y’imibare 6 iri muri porogaramu yawe.',

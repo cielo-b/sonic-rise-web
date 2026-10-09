@@ -120,6 +120,7 @@ export const fr: Partial<Record<MessageKey, string>> = {
   'auth.acceptPrivacy': 'J’accepte la {link} et le traitement de mes données par {studio} pour gérer mes réservations.',
   'auth.privacyLink': 'politique de confidentialité',
   'auth.marketing': 'Recevoir les actualités et offres (facultatif)',
+  'auth.phoneHint': 'MTN / Airtel — utilisé pour les paiements mobile money',
   'auth.passwordHint': 'Au moins 8 caractères',
   'auth.twoFaTitle': 'Vérification en deux étapes',
   'auth.twoFaSub': 'Saisissez le code à 6 chiffres de votre application d’authentification.',

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useNow } from '@/lib/time'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { useI18n } from '@/lib/i18n'
@@ -15,8 +16,8 @@ export default function PortalHome() {
   const invoices = useQuery({ queryKey: ['invoices', 'mine'], queryFn: api.invoices.list })
   const quotes = useQuery({ queryKey: ['quotes', 'mine'], queryFn: api.quotes.list })
 
+  const now = useNow()
   if (bookings.isLoading) return <Loading />
-  const now = Date.now()
   const upcoming = (bookings.data ?? [])
     .filter((b) => ['PENDING_DEPOSIT', 'PENDING', 'CONFIRMED'].includes(b.status) && new Date(b.endsAt).getTime() > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt))

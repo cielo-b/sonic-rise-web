@@ -127,6 +127,7 @@ export const en = {
   'auth.acceptPrivacy': 'I agree to the {link} and to {studio} processing my data to manage my bookings.',
   'auth.privacyLink': 'privacy policy',
   'auth.marketing': 'Send me news and offers (optional)',
+  'auth.phoneHint': 'MTN / Airtel — used for mobile money payments',
   'auth.passwordHint': 'At least 8 characters',
   'auth.twoFaTitle': 'Two-step verification',
   'auth.twoFaSub': 'Enter the 6-digit code from your authenticator app.',
