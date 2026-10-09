@@ -1,93 +1,115 @@
 'use client'
 
-import React, { createContext, useContext, useState, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { api, type AuthResponse, setToken, clearToken } from '@/lib/api'
-import { QK } from '@/lib/queries'
-import { toRole, type ApiRole } from '@/lib/roles'
+import { createContext, useCallback, useContext, useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  api,
+  clearToken,
+  getToken,
+  setToken,
+  setUnauthorizedHandler,
+  type AuthResponse,
+  type Me,
+  type TwoFactorChallenge,
+} from '@/lib/api'
+import { can as canRole, isStaff, type Permission } from '@/lib/roles'
 
-interface AuthUser {
-  id: string
-  name: string
-  email: string
-  role: 'SUPERADMIN' | 'CLIENT'
-  avatarUrl: string | null
-}
-
-export interface TwoFactorChallenge {
-  requires2FA: true
-  tempToken: string
-}
-
-interface AuthContextValue {
-  user: AuthUser | null
-  setUser: (u: AuthUser | null) => void
-  /** Resolves to a 2FA challenge when the account has two-factor enabled. */
-  login: (email: string, password: string, remember: boolean) => Promise<AuthResponse | TwoFactorChallenge>
+interface AuthValue {
+  user: Me | null
+  isLoading: boolean
+  isStaff: boolean
+  can: (p: Permission) => boolean
+  login: (email: string, password: string, remember: boolean, platform?: boolean) => Promise<AuthResponse | TwoFactorChallenge>
   completeTwoFactor: (tempToken: string, code: string, remember: boolean) => Promise<AuthResponse>
+  /** Store a token from register/accept flows. */
+  signIn: (res: AuthResponse, remember: boolean) => Promise<void>
   logout: () => void
+  refresh: () => void
 }
 
-const AuthContext = createContext<AuthContextValue | null>(null)
-
-function applySession(data: AuthResponse, remember: boolean) {
-  setToken(data.access_token, remember)
-  const role = toRole(data.user.role as ApiRole)
-  // Always populate sessionStorage so the current tab works:
-  sessionStorage.setItem('sr_admin_auth', 'true')
-  sessionStorage.setItem('sr_admin_role', role)
-  sessionStorage.setItem('sr_admin_name', data.user.name)
-  // Persist to localStorage only when the user chose "remember me":
-  if (remember) {
-    localStorage.setItem('sr_admin_auth', 'true')
-    localStorage.setItem('sr_admin_role', role)
-    localStorage.setItem('sr_admin_name', data.user.name)
-  }
-}
+const AuthContext = createContext<AuthValue | null>(null)
+export const ME_QUERY_KEY = ['me'] as const
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null)
   const qc = useQueryClient()
-
-  const startSession = useCallback((data: AuthResponse, remember: boolean) => {
-    applySession(data, remember)
-    setUser({ ...data.user })
-    // Seed the TanStack cache so useMe() resolves immediately
-    qc.setQueryData(QK.me, data.user)
-  }, [qc])
-
-  const login = useCallback(async (email: string, password: string, remember: boolean) => {
-    const data = await api.auth.login(email, password)
-    if ('requires2FA' in data) return data
-    startSession(data, remember)
-    return data
-  }, [startSession])
-
-  const completeTwoFactor = useCallback(async (tempToken: string, code: string, remember: boolean) => {
-    const data = await api.auth.login2fa(tempToken, code)
-    startSession(data, remember)
-    return data
-  }, [startSession])
+  const me = useQuery({
+    queryKey: ME_QUERY_KEY,
+    queryFn: () => (getToken() ? api.me.get() : Promise.resolve(null)),
+    retry: false,
+    staleTime: 60_000,
+  })
 
   const logout = useCallback(() => {
+    const hadToken = !!getToken()
     clearToken()
-    ;['sr_admin_auth', 'sr_admin_role', 'sr_admin_name'].forEach((k) => {
-      localStorage.removeItem(k)
-      sessionStorage.removeItem(k)
-    })
-    setUser(null)
     qc.clear()
+    qc.setQueryData(ME_QUERY_KEY, null)
+    if (hadToken) void api.auth.revokeAll().catch(() => undefined)
   }, [qc])
 
-  return (
-    <AuthContext.Provider value={{ user, setUser, login, completeTwoFactor, logout }}>
-      {children}
-    </AuthContext.Provider>
+  useEffect(() => {
+    // Expired or revoked session: drop it and show the signed-out state.
+    setUnauthorizedHandler(() => {
+      clearToken()
+      qc.setQueryData(ME_QUERY_KEY, null)
+    })
+    return () => setUnauthorizedHandler(null)
+  }, [qc])
+
+  const signIn = useCallback(
+    async (res: AuthResponse, remember: boolean) => {
+      setToken(res.access_token, remember)
+      await qc.invalidateQueries()
+      await qc.fetchQuery({ queryKey: ME_QUERY_KEY, queryFn: () => api.me.get() })
+    },
+    [qc],
   )
+
+  const login = useCallback(
+    async (email: string, password: string, remember: boolean, platform = false) => {
+      const res = platform ? await api.auth.platformLogin(email, password) : await api.auth.login(email, password)
+      if ('requires2FA' in res) return res
+      await signIn(res, remember)
+      return res
+    },
+    [signIn],
+  )
+
+  const completeTwoFactor = useCallback(
+    async (tempToken: string, code: string, remember: boolean) => {
+      const res = await api.auth.login2fa(tempToken, code)
+      await signIn(res, remember)
+      return res
+    },
+    [signIn],
+  )
+
+  const user = me.data ?? null
+  const value = useMemo<AuthValue>(
+    () => ({
+      user,
+      isLoading: me.isLoading,
+      isStaff: isStaff(user?.role),
+      can: (p) => canRole(user?.role, p),
+      login,
+      completeTwoFactor,
+      signIn,
+      logout,
+      refresh: () => void me.refetch(),
+    }),
+    [user, me, login, completeTwoFactor, signIn, logout],
+  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuth() {
+export function useAuth(): AuthValue {
   const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
+  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
   return ctx
+}
+
+/** Where a signed-in user belongs after logging in. */
+export function homeFor(user: Pick<Me, 'role'>): string {
+  if (user.role === 'PLATFORM_ADMIN') return '/platform'
+  return isStaff(user.role) ? '/admin' : '/portal'
 }
