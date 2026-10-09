@@ -9,15 +9,20 @@ import { useAuth, homeFor } from '@/context/AuthContext'
 import { LOCALES, useI18n } from '@/lib/i18n'
 import type { MessageKey } from '@/lib/i18n'
 import { Loading } from '../ui'
+import { SoundMark } from './Logo'
 
 export function StudioMark({ size = 32 }: { size?: number }) {
   const { studio } = useStudio()
   if (!studio) return null
-  return studio.logoUrl ? (
+  if (studio.logoUrl) {
     // eslint-disable-next-line @next/next/no-img-element -- studio-uploaded logo
-    <img src={studio.logoUrl} alt={studio.name} style={{ height: size }} className="w-auto object-contain" />
-  ) : (
-    <span className="font-headline font-bold text-lg tracking-tight text-text-primary">{studio.name}</span>
+    return <img src={studio.logoUrl} alt={studio.name} style={{ height: size }} className="w-auto object-contain" />
+  }
+  return (
+    <span className="flex items-center gap-2.5">
+      <SoundMark className="text-brand-purple shrink-0" style={{ width: size * 0.9, height: size * 0.9 }} />
+      <span className="font-headline font-extrabold text-xl tracking-tight text-text-primary">{studio.name}</span>
+    </span>
   )
 }
 
@@ -69,7 +74,7 @@ export function Navbar() {
     </>
   ) : (
     <>
-      <Link href={`/login?next=${encodeURIComponent(pathname)}`} className="text-sm text-text-muted hover:text-text-primary px-2">
+      <Link href={pathname === '/' ? '/login' : `/login?next=${encodeURIComponent(pathname)}`} className="text-sm text-text-muted hover:text-text-primary px-2">
         {t('nav.login')}
       </Link>
       <Link href="/register" className="btn-glass text-sm py-2 px-4">
