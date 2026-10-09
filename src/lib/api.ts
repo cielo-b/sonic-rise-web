@@ -425,7 +425,7 @@ export const api = {
   },
 
   posts: {
-    list:    (all = false) => request<ApiPost[]>(`/posts${all ? '?all=true' : ''}`),
+    list:    (all = false) => request<ApiPost[]>(all ? '/posts/admin/all' : '/posts'),
     get:     (slug: string) => request<ApiPost>(`/posts/${slug}`),
     create:  (data: Partial<ApiPost>) =>
       request<ApiPost>('/posts', { method: 'POST', body: JSON.stringify(data) }),

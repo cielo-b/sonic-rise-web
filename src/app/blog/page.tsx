@@ -8,64 +8,21 @@ import { Footer } from '@/components/layout/Footer'
 import { ArrowRight, Clock, Calendar } from 'lucide-react'
 import { usePosts } from '@/lib/queries'
 import { toast } from 'sonner'
-import type { ApiPost } from '@/lib/api'
+import { api, type ApiPost } from '@/lib/api'
 
 const GRAD_POOL = [
   'from-[#7C3AED] to-[#3CD7FF]', 'from-[#D4AF37] to-[#D2BBFF]',
   'from-[#3CD7FF] to-[#6001D1]', 'from-[#D4AF37] to-[#7C3AED]',
 ]
 
-const STATIC_CATEGORIES = ['All', 'Studio Notes', 'Music', 'Film', 'Tech', 'Industry']
-
-const STATIC_POSTS = [
-  {
-    id: '1', featured: true,
-    title: 'Inside Dolby Atmos: How We Mix for Spatial Audio',
-    category: 'Tech', date: 'Nov 15, 2024', readTime: '6 min',
-    excerpt: 'A deep dive into our Atmos mastering suite and why spatial audio is the future of music and film consumption — and how we built the workflow around it in Kigali.',
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBpiGvdaVh-LIgSOXKSWdMJsrmKVCIti45LXVB6MyQ6pzaJq7J-EaHdfm5KR7EwVlzhoRaLFIpXbmg5bIovXSpJQNqS6_ot36lKRnzjJns3iaB2vBXEUmWKwBBpKLuTkUPa0QkLuLa7wUw-SYV37pXCBayWgIi0ANqQ9ARwsEtA-MJQVYarGmOVVvCyjOsq5ChCIf61SvqshncfDeIEcGYkiJT9Hf-AT8XK_DaXBbqNB3u2ZBNbBjj_THH1p8TEcpYHNLFKhtRU9_c',
-    author: { name: 'Jean-Luc Amahoro', initials: 'JA', grad: 'from-[#7C3AED] to-[#3CD7FF]' },
-  },
-  {
-    id: '2', featured: false,
-    title: 'Recording the Kigali Sound: Field Notes from Studio A',
-    category: 'Studio Notes', date: 'Nov 8, 2024', readTime: '4 min',
-    excerpt: 'What makes East African pop so rhythmically distinct — and how we capture it without losing the raw energy in the translation to digital.',
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC-farVLqfbVJ7p0q9sEz1DbtGkcgjwvR-zrsRB60nil7-wRH4RNbHmtbglOXLei_S4JWG2JBFxc8owfxx2TnHohF9fZzLnAbrFrJTOXniYDo86SKdPSdEJu3u6Lc1lsByMHHLpGv9Z3lWVcS26wj91fl12jnk7G13LA6O_dvRU9FEtGWI0s5iVgV6IX0iwlUdiB88xj0xpSUeH8RkJLU3L8OuS-pOoCURs_YefPGGshTmE8PQJrZodaX9bYNJamHBBVAfXvAVGVlI',
-    author: { name: 'Marie Uwase', initials: 'MU', grad: 'from-[#D4AF37] to-[#D2BBFF]' },
-  },
-  {
-    id: '3', featured: false,
-    title: 'Film Scoring on a Deadline: Lessons from 48 Hours',
-    category: 'Film', date: 'Oct 29, 2024', readTime: '5 min',
-    excerpt: 'Our composer-in-residence breaks down the creative and technical sprint behind scoring a short film in under two days using our live room and orchestral library.',
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAOk-Z0RhmVKVgNhixvIS7sWaH3xTrGYs6CO72TF63H-2JLCk59qOMN8N2EJ6WnusWRtiocHWAgJki_i4zhCf5R_Q_XSW-QCO3YFXaI8dT2A6ewKRDjD5rlQb-dH-E43vQVrj2-E5r3WT3reHjjIw3ZujKtY7jcMcHM_8pAQbbaOddwdj_TwbexsxaijWZTgvrTYMBf-hmQXlMyrGnD_jRyQiymB-MCBCpowIsRok8b76o9LL1Z5P0zKgRJv-TfnGIennBvW193TsA',
-    author: { name: 'Jean-Luc Amahoro', initials: 'JA', grad: 'from-[#7C3AED] to-[#3CD7FF]' },
-  },
-  {
-    id: '4', featured: false,
-    title: 'Why Your Mix Sounds Different on Earbuds',
-    category: 'Music', date: 'Oct 21, 2024', readTime: '3 min',
-    excerpt: 'The science behind low-frequency translation and how we use multi-reference monitoring to ensure your track sounds right on every playback system.',
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC4XFZR8ReuEcG5_MWaW_wSilXQnukZXijyduUin7Uo1RG093FcCp7FHClDKfCho5-FRnwbyECgltfATUoB6XYNuAC4ydOAASVBhOJJnX42s6WLSDXQLds3EpBMfyg3df8CcvQt9dCvgmiG6EGBNNBilbaP8VLEmAu-XSI9nEzfkhJaU_1m3cBI8o2Ii-ZS-K9Si6f0HF6sGxrjwLG3yGvoQ31FHnAoGTVdo_mH4d7VL0Dl7liic1Uy6uSLNXfZVSbLYr1ND8qXVqk',
-    author: { name: 'Aline Cyuzuzo', initials: 'AC', grad: 'from-[#D4AF37] to-[#7C3AED]' },
-  },
-  {
-    id: '5', featured: false,
-    title: 'The Rise of Podcast Studios in East Africa',
-    category: 'Industry', date: 'Oct 12, 2024', readTime: '7 min',
-    excerpt: 'A look at how creator-economy growth across Rwanda, Kenya and Uganda is reshaping what studios need to offer — and why we built our podcast suite first.',
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuB9TEYqnn7_2PtfOhx3Y_hmU5RewqJobl7pmbu3unxxfhEYpnFoWxDlSYdA58IJwJ6osFxmvfgJh3bqw7bwwKKVNJUMgTicxfH-JV3qQeNJxg63kE4Fk7Yo3WoYW4W0kpsZKAum1tlLDdzs-mzdJJbXnxPCIgE8_kJ2RcS0t7Fky0YMqWNgRYxUcAGaTPCZeZnHngEf5BTxIDBSWzg-VrZfijUjyRys9PP8AFAcXMbQKPO43e7sAYWn_kyff7Nz_jbNqby7zTcd-EU',
-    author: { name: 'Patrick Nsengimana', initials: 'PN', grad: 'from-[#3CD7FF] to-[#6001D1]' },
-  },
-  {
-    id: '6', featured: false,
-    title: 'SSL vs Neve: Which Console Fits Your Session?',
-    category: 'Tech', date: 'Sep 30, 2024', readTime: '5 min',
-    excerpt: "We've run thousands of sessions across both consoles. Here's our honest breakdown of when to reach for the SSL 4000 G+ versus the Neve 1073 — with audio examples.",
-    src: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCBaVhvnC4kF-lnc0irH-4Fbkyrj0O1wSVMLJAyGwJsQa5NobelwRw4SzLxqXZ1tSJN4NtmZPxZ6FRwFHjDuXlCZnc84gSOAtOsSmGUtMYlCY9i_KN0SqbQurqeyfdc8LB8rum1e0CExqURqnWQyucMAD4jEATsnhNjnfXcbun1aJZsyZ33b-eQtzPdstkMlpQqaqmWknRoJxJkE7OVavnYFV4vYa6qmkm20JJMEhJd1gNcQV343WgbsI3L820Zg7fq8WDVyx-qvYo',
-    author: { name: 'Jean-Luc Amahoro', initials: 'JA', grad: 'from-[#7C3AED] to-[#3CD7FF]' },
-  },
+/** Stock covers used when a post has no cover image. */
+const FALLBACK_COVERS = [
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuBpiGvdaVh-LIgSOXKSWdMJsrmKVCIti45LXVB6MyQ6pzaJq7J-EaHdfm5KR7EwVlzhoRaLFIpXbmg5bIovXSpJQNqS6_ot36lKRnzjJns3iaB2vBXEUmWKwBBpKLuTkUPa0QkLuLa7wUw-SYV37pXCBayWgIi0ANqQ9ARwsEtA-MJQVYarGmOVVvCyjOsq5ChCIf61SvqshncfDeIEcGYkiJT9Hf-AT8XK_DaXBbqNB3u2ZBNbBjj_THH1p8TEcpYHNLFKhtRU9_c',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuC-farVLqfbVJ7p0q9sEz1DbtGkcgjwvR-zrsRB60nil7-wRH4RNbHmtbglOXLei_S4JWG2JBFxc8owfxx2TnHohF9fZzLnAbrFrJTOXniYDo86SKdPSdEJu3u6Lc1lsByMHHLpGv9Z3lWVcS26wj91fl12jnk7G13LA6O_dvRU9FEtGWI0s5iVgV6IX0iwlUdiB88xj0xpSUeH8RkJLU3L8OuS-pOoCURs_YefPGGshTmE8PQJrZodaX9bYNJamHBBVAfXvAVGVlI',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuAOk-Z0RhmVKVgNhixvIS7sWaH3xTrGYs6CO72TF63H-2JLCk59qOMN8N2EJ6WnusWRtiocHWAgJki_i4zhCf5R_Q_XSW-QCO3YFXaI8dT2A6ewKRDjD5rlQb-dH-E43vQVrj2-E5r3WT3reHjjIw3ZujKtY7jcMcHM_8pAQbbaOddwdj_TwbexsxaijWZTgvrTYMBf-hmQXlMyrGnD_jRyQiymB-MCBCpowIsRok8b76o9LL1Z5P0zKgRJv-TfnGIennBvW193TsA',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuC4XFZR8ReuEcG5_MWaW_wSilXQnukZXijyduUin7Uo1RG093FcCp7FHClDKfCho5-FRnwbyECgltfATUoB6XYNuAC4ydOAASVBhOJJnX42s6WLSDXQLds3EpBMfyg3df8CcvQt9dCvgmiG6EGBNNBilbaP8VLEmAu-XSI9nEzfkhJaU_1m3cBI8o2Ii-ZS-K9Si6f0HF6sGxrjwLG3yGvoQ31FHnAoGTVdo_mH4d7VL0Dl7liic1Uy6uSLNXfZVSbLYr1ND8qXVqk',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuB9TEYqnn7_2PtfOhx3Y_hmU5RewqJobl7pmbu3unxxfhEYpnFoWxDlSYdA58IJwJ6osFxmvfgJh3bqw7bwwKKVNJUMgTicxfH-JV3qQeNJxg63kE4Fk7Yo3WoYW4W0kpsZKAum1tlLDdzs-mzdJJbXnxPCIgE8_kJ2RcS0t7Fky0YMqWNgRYxUcAGaTPCZeZnHngEf5BTxIDBSWzg-VrZfijUjyRys9PP8AFAcXMbQKPO43e7sAYWn_kyff7Nz_jbNqby7zTcd-EU',
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuCBaVhvnC4kF-lnc0irH-4Fbkyrj0O1wSVMLJAyGwJsQa5NobelwRw4SzLxqXZ1tSJN4NtmZPxZ6FRwFHjDuXlCZnc84gSOAtOsSmGUtMYlCY9i_KN0SqbQurqeyfdc8LB8rum1e0CExqURqnWQyucMAD4jEATsnhNjnfXcbun1aJZsyZ33b-eQtzPdstkMlpQqaqmWknRoJxJkE7OVavnYFV4vYa6qmkm20JJMEhJd1gNcQV343WgbsI3L820Zg7fq8WDVyx-qvYo',
 ]
 
 function apiPostToDisplay(p: ApiPost, i: number) {
@@ -77,7 +34,7 @@ function apiPostToDisplay(p: ApiPost, i: number) {
     date:     new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     readTime: p.readTime,
     excerpt:  p.excerpt,
-    src:      p.coverUrl ?? STATIC_POSTS[i % STATIC_POSTS.length]?.src ?? '',
+    src:      p.coverUrl ?? FALLBACK_COVERS[i % FALLBACK_COVERS.length] ?? '',
     author: {
       name:     p.authorName,
       initials: p.authorInitials,
@@ -86,25 +43,32 @@ function apiPostToDisplay(p: ApiPost, i: number) {
   }
 }
 
-function handleNewsletterSubmit(e: React.FormEvent<HTMLFormElement>) {
+/** Sign-ups are emailed to the studio inbox via the contact endpoint. */
+async function handleNewsletterSubmit(e: React.FormEvent<HTMLFormElement>) {
   e.preventDefault()
-  const email = (new FormData(e.currentTarget).get('email') as string).trim()
+  const form = e.currentTarget
+  const email = (new FormData(form).get('email') as string).trim()
   if (!email) return
-  toast.success('You\'re on the list! First issue lands next month.')
-  e.currentTarget.reset()
+  try {
+    await api.contact.send({
+      name: 'Newsletter subscriber',
+      email,
+      subject: 'Newsletter signup',
+      message: `Please add ${email} to the SonicRise Journal mailing list.`,
+    })
+    toast.success('Thanks! You\'ll get the next issue of the Journal.')
+    form.reset()
+  } catch {
+    toast.error('Could not sign you up right now. Please try again.')
+  }
 }
 
 export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const { data: apiPosts } = usePosts()
 
-  const allPosts = apiPosts && apiPosts.length > 0
-    ? apiPosts.map(apiPostToDisplay)
-    : STATIC_POSTS
-
-  const categories = apiPosts && apiPosts.length > 0
-    ? ['All', ...Array.from(new Set(apiPosts.map((p) => p.category)))]
-    : STATIC_CATEGORIES
+  const allPosts   = (apiPosts ?? []).map(apiPostToDisplay)
+  const categories = ['All', ...Array.from(new Set(allPosts.map((p) => p.category)))]
 
   const filtered = activeCategory === 'All'
     ? allPosts

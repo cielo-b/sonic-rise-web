@@ -640,6 +640,14 @@ export default function ClientsPage() {
     }
   })
 
+  // Revenue from completed sessions across all clients
+  const totalRevenue = (apiClients || []).reduce(
+    (sum: number, u: any) => sum + (u.bookings || [])
+      .filter((b: any) => b.status === 'COMPLETED')
+      .reduce((s: number, b: any) => s + Number(b.totalAmount), 0),
+    0,
+  )
+
   const filtered = mappedClients.filter((c) => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
                         c.company.toLowerCase().includes(search.toLowerCase())
@@ -669,7 +677,7 @@ export default function ClientsPage() {
           {can('revenue:view') && (
             <div className="bg-[#292932] px-4 py-2.5 rounded-xl border border-white/5 text-center">
               <span className="block font-mono text-[10px] text-[#D2BBFF] uppercase tracking-wider">Revenue</span>
-              <span className="block font-headline text-xl font-bold text-[#E4E1EC]">$2.4M</span>
+              <span className="block font-headline text-xl font-bold text-[#E4E1EC]">{apiClients ? `${Math.round(totalRevenue / 1000).toLocaleString()}k RWF` : '—'}</span>
             </div>
           )}
           {can('clients:write') && (
