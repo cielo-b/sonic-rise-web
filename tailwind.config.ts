@@ -20,8 +20,8 @@ const config: Config = {
         'bg-alt':     '#1A1A22',   // Alternate sections
 
         // Brand accents
-        'brand-purple': '#7C3AED', // Energy — primary CTA
-        'brand-cyan':   '#00D4FF', // Precision — technical elements
+        'brand-purple': 'var(--brand)', // Studio primary colour (runtime)
+        'brand-cyan':   'var(--accent)', // Studio accent colour (runtime)
         'brand-gold':   '#D4AF37', // Premium — membership / awards
 
         // Text

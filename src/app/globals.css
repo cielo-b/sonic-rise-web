@@ -19,6 +19,9 @@
 @layer base {
   :root {
     color-scheme: dark;
+    /* Studio branding — overridden at runtime from the studio's settings. */
+    --brand: #7C3AED;
+    --accent: #00D4FF;
   }
 
   *,
@@ -67,7 +70,7 @@
 
   /* Focusable elements: purple ring instead of browser default */
   :focus-visible {
-    outline: 2px solid #7C3AED;
+    outline: 2px solid var(--brand);
     outline-offset: 2px;
   }
 
@@ -75,11 +78,11 @@
   ::-webkit-scrollbar              { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track        { background: #0B0B0F; }
   ::-webkit-scrollbar-thumb        { background: #47464B; border-radius: 999px; }
-  ::-webkit-scrollbar-thumb:hover  { background: #7C3AED; }
+  ::-webkit-scrollbar-thumb:hover  { background: var(--brand); }
 
   /* Selection highlight */
   ::selection {
-    background: rgba(124, 58, 237, 0.35);
+    background: color-mix(in srgb, var(--brand) 35%, transparent);
     color: #E4E1EC;
   }
 }
@@ -110,7 +113,7 @@
     gap: 0.5rem;
     padding: 0.625rem 1.5rem;
     border-radius: 0.5rem;
-    background-color: #7C3AED;
+    background-color: var(--brand);
     color: #ffffff;
     font-family: var(--font-geist), sans-serif;
     font-weight: 500;
@@ -124,8 +127,8 @@
   }
 
   .btn-primary:hover {
-    background-color: #6d28d9;
-    box-shadow: 0 0 24px -4px rgba(0, 212, 255, 0.45);
+    background-color: color-mix(in srgb, var(--brand) 85%, black);
+    box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent) 45%, transparent);
     transform: translateY(-1px);
   }
 
@@ -220,8 +223,8 @@
   }
 
   .input-studio:focus {
-    border-color: #00D4FF;
-    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
   }
 
   select.input-studio {
@@ -268,8 +271,8 @@
   }
 
   .chip-info {
-    background: rgba(0, 212, 255, 0.1);
-    color: #00D4FF;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
   }
 
   .chip-purple {
@@ -304,7 +307,7 @@
   /* ── Gradient text ─────────────────────────────────────────────────────── */
   /* Purple → Cyan (hero / high-conversion moments) */
   .gradient-text {
-    background: linear-gradient(45deg, #7C3AED, #00D4FF);
+    background: linear-gradient(45deg, var(--brand), var(--accent));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -321,7 +324,7 @@
 
   /* ── Gradient backgrounds ──────────────────────────────────────────────── */
   .gradient-brand {
-    background: linear-gradient(135deg, #7C3AED 0%, #00D4FF 100%);
+    background: linear-gradient(135deg, var(--brand) 0%, var(--accent) 100%);
   }
 
   .gradient-surface {
@@ -378,7 +381,7 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.12em;
-    color: #7C3AED;
+    color: var(--brand);
   }
 
   /* Tight headline tracking for display sizes */
@@ -387,7 +390,7 @@
   /* ── Playback timeline ─────────────────────────────────────────────────── */
   .timeline-bar {
     height: 4px;
-    background: #00D4FF;
+    background: var(--accent);
     border-radius: 999px;
   }
 
