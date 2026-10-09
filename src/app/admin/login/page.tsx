@@ -10,17 +10,9 @@ import { useAuth } from '@/context/AuthContext'
 import { toast } from 'sonner'
 import { SonicRiseMark } from '@/components/ui/SonicRiseLogo'
 
-const DEMO_PASSWORD = 'sonicrise2024'
-const DEMO_USERS = [
-  { email: 'admin@sonicrise.rw',  label: 'Super Admin', color: 'text-[#D2BBFF]'  },
-  { email: 'jl@sonicrise.rw',    label: 'Admin',       color: 'text-brand-cyan' },
-  { email: 'marie@sonicrise.rw', label: 'Editor',      color: 'text-amber-400'  },
-  { email: 'sam@sonicrise.rw',   label: 'Viewer',      color: 'text-[#929095]'  },
-]
-
 export default function AdminLoginPage() {
   const router = useRouter()
-  const { login } = useAuth()
+  const { login, completeTwoFactor } = useAuth()
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -28,6 +20,8 @@ export default function AdminLoginPage() {
   const [remember, setRemember] = useState(false)
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState('')
+  const [tempToken, setTempToken] = useState<string | null>(null)
+  const [code, setCode]           = useState('')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,13 +29,35 @@ export default function AdminLoginPage() {
     if (!email || !password) { setError('Please enter your email and password.'); return }
     setLoading(true)
     try {
-      await login(email.trim(), password, remember)
+      const res = await login(email.trim(), password, remember)
+      if ('requires2FA' in res) {
+        setTempToken(res.tempToken)
+        setLoading(false)
+        return
+      }
       router.push('/admin')
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Invalid credentials.'
       setError(msg)
       toast.error(msg)
       setLoading(false)
+    }
+  }
+
+  async function handleCodeSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!tempToken) return
+    setError('')
+    setLoading(true)
+    try {
+      await completeTwoFactor(tempToken, code.trim(), remember)
+      router.push('/admin')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Invalid code.'
+      setError(msg)
+      setLoading(false)
+      // The challenge token is short-lived; send the user back to the password step if it expired.
+      if (/session/i.test(msg)) { setTempToken(null); setCode('') }
     }
   }
 
@@ -137,6 +153,42 @@ export default function AdminLoginPage() {
             </p>
 
             {/* Form */}
+            {tempToken ? (
+              <form onSubmit={handleCodeSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="otp" className="font-mono text-[10px] uppercase tracking-widest text-[#929095]">
+                    Authenticator code
+                  </label>
+                  <input
+                    id="otp"
+                    autoFocus
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="123456"
+                    className="input-studio text-center font-mono text-xl tracking-[0.5em]"
+                  />
+                  <p className="text-[#929095] text-xs">Enter the 6-digit code from your authenticator app.</p>
+                </div>
+                {error && (
+                  <div className="flex items-center gap-2 text-red-400 text-sm">
+                    <AlertCircle size={14} /> {error}
+                  </div>
+                )}
+                <button type="submit" disabled={loading || code.length !== 6} className="btn-primary w-full py-3 disabled:opacity-50">
+                  {loading ? 'Verifying…' : 'Verify & Sign In'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setTempToken(null); setCode(''); setError('') }}
+                  className="w-full text-center text-[#929095] hover:text-[#C8C5CB] text-xs font-mono uppercase tracking-wider"
+                >
+                  Use a different account
+                </button>
+              </form>
+            ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
 
               {/* Error */}
@@ -235,26 +287,7 @@ export default function AdminLoginPage() {
                 )}
               </button>
             </form>
-
-            {/* Demo accounts */}
-            <div className="mt-8 p-4 rounded-xl bg-white/[0.03] border border-white/8 space-y-3">
-              <p className="font-mono text-[10px] uppercase tracking-widest text-[#929095]">
-                Demo Accounts — password: <span className="text-brand-cyan">{DEMO_PASSWORD}</span>
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {DEMO_USERS.map((u) => (
-                  <button
-                    key={u.email}
-                    type="button"
-                    onClick={() => { setEmail(u.email); setPassword(DEMO_PASSWORD); setError('') }}
-                    className="p-2.5 rounded-lg bg-[#1B1B23] border border-white/8 text-left hover:border-white/20 transition-all"
-                  >
-                    <p className={`font-mono text-[10px] font-bold ${u.color}`}>{u.label}</p>
-                    <p className="text-[#929095] text-[10px] truncate mt-0.5">{u.email}</p>
-                  </button>
-                ))}
-              </div>
-            </div>
+            )}
           </motion.div>
         </div>
 

@@ -91,6 +91,7 @@ function totalSizeMB(assets: ApiMediaAsset[]) {
 function fmtSize(mb: number) {
   if (mb >= 1024 * 1024) return `${(mb / 1024 / 1024).toFixed(1)} TB`
   if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`
+  if (mb > 0 && mb < 1) return `${Math.max(1, Math.round(mb * 1024))} KB`
   return `${mb.toFixed(1)} MB`
 }
 

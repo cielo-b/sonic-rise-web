@@ -14,10 +14,17 @@ interface AuthUser {
   avatarUrl: string | null
 }
 
+export interface TwoFactorChallenge {
+  requires2FA: true
+  tempToken: string
+}
+
 interface AuthContextValue {
   user: AuthUser | null
   setUser: (u: AuthUser | null) => void
-  login: (email: string, password: string, remember: boolean) => Promise<AuthResponse>
+  /** Resolves to a 2FA challenge when the account has two-factor enabled. */
+  login: (email: string, password: string, remember: boolean) => Promise<AuthResponse | TwoFactorChallenge>
+  completeTwoFactor: (tempToken: string, code: string, remember: boolean) => Promise<AuthResponse>
   logout: () => void
 }
 
@@ -42,17 +49,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const qc = useQueryClient()
 
-  const login = useCallback(async (email: string, password: string, remember: boolean) => {
-    const data = await api.auth.login(email, password)
-    if ('requires2FA' in data) {
-      throw new Error('Two-factor sign-in is not supported in this panel yet.')
-    }
+  const startSession = useCallback((data: AuthResponse, remember: boolean) => {
     applySession(data, remember)
     setUser({ ...data.user })
     // Seed the TanStack cache so useMe() resolves immediately
     qc.setQueryData(QK.me, data.user)
-    return data
   }, [qc])
+
+  const login = useCallback(async (email: string, password: string, remember: boolean) => {
+    const data = await api.auth.login(email, password)
+    if ('requires2FA' in data) return data
+    startSession(data, remember)
+    return data
+  }, [startSession])
+
+  const completeTwoFactor = useCallback(async (tempToken: string, code: string, remember: boolean) => {
+    const data = await api.auth.login2fa(tempToken, code)
+    startSession(data, remember)
+    return data
+  }, [startSession])
 
   const logout = useCallback(() => {
     clearToken()
@@ -65,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [qc])
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, completeTwoFactor, logout }}>
       {children}
     </AuthContext.Provider>
   )

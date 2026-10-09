@@ -107,8 +107,9 @@ export default function BookingPage() {
         booking: { serviceType: form.service, dateTime: timeStr, totalAmount: BASE_PRICE[form.service], notes: buildNotes(form) },
       },
       {
-        onSuccess: ({ booking }) => {
-          sessionStorage.setItem('sr_last_booking', JSON.stringify(booking))
+        onSuccess: ({ booking, auth }) => {
+          // The create response has no client relation; attach the name for the greeting.
+          sessionStorage.setItem('sr_last_booking', JSON.stringify({ ...booking, client: booking.client ?? auth.user }))
           router.push('/booking/confirmation')
         },
         onError: (err) => toast.error(err instanceof Error ? err.message : 'Booking failed. Please try again.'),

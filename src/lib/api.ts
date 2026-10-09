@@ -206,7 +206,9 @@ const uploadFile = (
         resolve({
           url: body.url,
           type: body.type ?? (mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : 'image'),
-          size: body.size ?? `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          size: body.size ?? (file.size < 1024 * 1024
+            ? `${Math.max(1, Math.round(file.size / 1024))} KB`
+            : `${(file.size / (1024 * 1024)).toFixed(1)} MB`),
           name: body.name ?? file.name,
         })
       } else {
@@ -231,6 +233,12 @@ export const api = {
       request<AuthResponse | { requires2FA: true; tempToken: string }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
+      }),
+
+    login2fa: (tempToken: string, code: string) =>
+      request<AuthResponse>('/auth/login/2fa', {
+        method: 'POST',
+        body: JSON.stringify({ tempToken, code }),
       }),
 
     register: (data: { name: string; email: string; password: string; phone?: string }) =>

@@ -339,7 +339,7 @@ function UploadModal({ onClose, parentId }: { onClose: () => void, parentId: str
     setUploading(true)
     setUploadProgress(0)
     try {
-      let totalFiles = selectedFiles.length
+      const totalFiles = selectedFiles.length
       let completedFiles = 0
       for (const file of selectedFiles) {
         const { url, type, size, name } = await api.media.upload(file, (p) => {
@@ -663,7 +663,7 @@ export default function MediaManagerPage() {
     }
   }
 
-  let filtered = assets.filter((a) => {
+  const filtered = assets.filter((a) => {
     if (activeFilter === 'Trash') return a.isTrash
     if (a.isTrash) return false
 
