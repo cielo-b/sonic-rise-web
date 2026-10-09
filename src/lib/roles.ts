@@ -1,42 +1,57 @@
-export type Role    = 'Super Admin' | 'Client'
-export type ApiRole = 'SUPERADMIN'  | 'CLIENT'
+import type { Role } from './api'
 
-export function toRole(apiRole: ApiRole): Role {
-  return apiRole === 'SUPERADMIN' ? 'Super Admin' : 'Client'
+/**
+ * Mirrors the API's permission map (sonic-rise-api/src/common/permissions.ts).
+ * Used only to shape the UI — the API enforces every permission itself.
+ */
+export type Permission =
+  | 'bookings.read'
+  | 'bookings.write'
+  | 'clients.read'
+  | 'clients.write'
+  | 'staff.manage'
+  | 'resources.manage'
+  | 'finance.read'
+  | 'finance.write'
+  | 'projects.read'
+  | 'projects.write'
+  | 'deliverables.upload'
+  | 'content.write'
+  | 'reports.read'
+  | 'studio.settings'
+  | 'studio.billing'
+
+const ALL: Permission[] = [
+  'bookings.read', 'bookings.write', 'clients.read', 'clients.write', 'staff.manage',
+  'resources.manage', 'finance.read', 'finance.write', 'projects.read', 'projects.write',
+  'deliverables.upload', 'content.write', 'reports.read', 'studio.settings', 'studio.billing',
+]
+
+export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
+  PLATFORM_ADMIN: ALL,
+  OWNER: ALL,
+  MANAGER: ALL.filter((p) => p !== 'studio.billing'),
+  ENGINEER: ['bookings.read', 'clients.read', 'projects.read', 'projects.write', 'deliverables.upload'],
+  FRONT_DESK: [
+    'bookings.read', 'bookings.write', 'clients.read', 'clients.write',
+    'finance.read', 'finance.write', 'projects.read',
+  ],
+  CLIENT: [],
 }
 
-/** Reads the role claim from the JWT; anything unreadable is treated as a client. */
-export function roleFromToken(token: string): Role {
-  try {
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
-    return toRole(payload.role as ApiRole)
-  } catch {
-    return 'Client'
-  }
+export const STAFF_ROLES: Role[] = ['OWNER', 'MANAGER', 'ENGINEER', 'FRONT_DESK']
+
+export function can(role: Role | undefined, permission: Permission): boolean {
+  return !!role && ROLE_PERMISSIONS[role].includes(permission)
 }
 
-export const PERMISSIONS = {
-  'revenue:view':      ['Super Admin'],
-  'bookings:write':    ['Super Admin', 'Client'],
-  'clients:write':     ['Super Admin'],
-  'content:write':     ['Super Admin'],
-  'media:upload':      ['Super Admin'],
-  'users:manage':      ['Super Admin'],
-  'settings:billing':  ['Super Admin'],
-  'settings:general':  ['Super Admin', 'Client'],
-} as const
-
-export type Permission = keyof typeof PERMISSIONS
-
-export function can(role: Role, permission: Permission): boolean {
-  return (PERMISSIONS[permission] as readonly string[]).includes(role)
+export function isStaff(role: Role | undefined): boolean {
+  return !!role && (role === 'PLATFORM_ADMIN' || STAFF_ROLES.includes(role))
 }
 
-/** Returns true if the given pathname is accessible to the role */
-export function routeAllowed(pathname: string, role: Role): boolean {
-  if (pathname.startsWith('/admin/users'))    return can(role, 'users:manage')
-  if (pathname.startsWith('/admin/settings')) return can(role, 'settings:general')
-  if (pathname.startsWith('/admin/clients'))  return can(role, 'clients:write')
-  if (pathname.startsWith('/admin/blog'))     return can(role, 'content:write')
-  return true
+/** Roles the given role may assign to team members. */
+export function assignableRoles(role: Role | undefined): Role[] {
+  if (role === 'OWNER' || role === 'PLATFORM_ADMIN') return ['OWNER', 'MANAGER', 'ENGINEER', 'FRONT_DESK']
+  if (role === 'MANAGER') return ['MANAGER', 'ENGINEER', 'FRONT_DESK']
+  return []
 }
