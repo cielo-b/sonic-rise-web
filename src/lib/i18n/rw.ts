@@ -61,6 +61,8 @@ export const rw: Partial<Record<MessageKey, string>> = {
   'home.ctaTitle': 'Witeguye gutangira?',
   'home.ctaSub': 'Hitamo serivisi n’isaha, uba ufashe umwanya.',
   'home.noServices': 'Serivisi zizagaragara hano studio nimara kuzongeraho.',
+  'home.rooms': 'Ibyumba byacu',
+  'home.faq': 'Ibibazo bikunze kubazwa',
   'home.allWork': 'Reba byose',
 
   'service.includes': 'Birimo',

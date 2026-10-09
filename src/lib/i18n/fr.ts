@@ -57,6 +57,8 @@ export const fr: Partial<Record<MessageKey, string>> = {
   'home.ctaTitle': 'Prêt à commencer ?',
   'home.ctaSub': 'Choisissez un service et un horaire, c’est réservé.',
   'home.noServices': 'Les services apparaîtront ici dès que le studio les aura ajoutés.',
+  'home.rooms': 'Nos salles',
+  'home.faq': 'Questions',
   'home.allWork': 'Tout voir',
 
   'service.includes': 'Inclus',

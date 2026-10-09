@@ -59,6 +59,8 @@ export const en = {
   'home.ctaTitle': 'Ready to start?',
   'home.ctaSub': 'Pick a service, choose a time and you are booked.',
   'home.noServices': 'Services will appear here once the studio adds them.',
+  'home.rooms': 'Our rooms',
+  'home.faq': 'Questions',
   'home.allWork': 'All work',
 
   // Services
