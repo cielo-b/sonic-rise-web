@@ -748,6 +748,9 @@ export const api = {
     list: () => get<Inquiry[]>('/inquiries'),
     setHandled: (id: string, isHandled: boolean) => patch<Inquiry>(`/inquiries/${id}`, { isHandled }),
   },
+  subscribers: {
+    list: () => get<{ id: string; email: string; consentAt: string; createdAt: string }[]>('/subscribers'),
+  },
   contact: {
     send: (data: { name: string; email: string; phone?: string; subject?: string; message: string }) => post<{ ok: true }>('/contact', data),
     subscribe: (email: string) => post<{ ok: true }>('/newsletter', { email, consent: true }),
