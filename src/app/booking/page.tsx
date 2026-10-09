@@ -15,6 +15,7 @@ import { Footer }  from '@/components/layout/Footer'
 import { useRegisterAndBook } from '@/lib/queries'
 import { toast } from 'sonner'
 import { EASE } from '@/lib/motion'
+import { studioDateTime } from '@/lib/time'
 
 type ServiceType = 'AUDIO' | 'VIDEO' | 'LIVESTREAM' | 'PODCAST'
 
@@ -98,7 +99,7 @@ export default function BookingPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const timeStr = form.date
-      ? `${form.date}T${TIME_START[form.time] ?? '09:00'}:00+02:00` // studio time (Africa/Kigali, UTC+2)
+      ? studioDateTime(form.date, TIME_START[form.time] ?? '09:00')
       : new Date().toISOString()
 
     registerAndBook(

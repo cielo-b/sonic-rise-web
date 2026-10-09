@@ -53,6 +53,7 @@ export default function AdminSettingsPage() {
   const [profileEmail, setProfileEmail] = useState('')
   const [profilePhone, setProfilePhone] = useState('')
 
+  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
 
@@ -102,13 +103,22 @@ export default function AdminSettingsPage() {
   }
 
   async function handlePasswordUpdate() {
+    if (!currentPassword) {
+      toast.error('Enter your current password.')
+      return
+    }
     if (!newPassword || newPassword !== confirmPassword) {
       toast.error('Passwords do not match or are empty.')
       return
     }
+    if (newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters.')
+      return
+    }
     setSaving(true)
     try {
-      await api.users.update({ password: newPassword })
+      await api.users.update({ password: newPassword, currentPassword })
+      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       toast.success('Password updated.')
@@ -284,6 +294,10 @@ export default function AdminSettingsPage() {
                       <h3 className="font-headline text-[#D2BBFF] text-lg font-semibold">Password</h3>
                     </div>
                     <div className="space-y-3 max-w-md">
+                      <div className="space-y-1.5">
+                        <label className="font-mono text-[10px] uppercase tracking-widest text-[#929095]">Current Password</label>
+                        <input type={showPass ? 'text' : 'password'} value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} placeholder="Current Password" autoComplete="current-password" className="input-studio text-sm" />
+                      </div>
                       <div className="space-y-1.5">
                         <label className="font-mono text-[10px] uppercase tracking-widest text-[#929095]">New Password</label>
                         <div className="relative">

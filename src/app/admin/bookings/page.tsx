@@ -12,6 +12,7 @@ import {
   Eye, Edit2, XCircle, Trash2,
 } from 'lucide-react'
 import { useBookings, useUpdateBookingStatus, useCreateBooking, useUpdateBooking, useDeleteBooking, useClients } from '@/lib/queries'
+import { STUDIO_TZ, studioDateTime, toStudioInputs } from '@/lib/time'
 import { toast } from 'sonner'
 import { type ApiBooking } from '@/lib/api'
 
@@ -19,22 +20,22 @@ import { type ApiBooking } from '@/lib/api'
 type FilterTab = 'All Bookings' | 'Confirmed' | 'Pending' | 'Completed'
 type ViewMode  = 'list' | 'calendar'
 
-/* ─── Static data ────────────────────────────────────────────────────────── */
+/* ─── Card config ────────────────────────────────────────────────────────── */
 const STAT_CARDS = [
   {
-    label: 'Pending Requests', value: '24', delta: '+12%',
+    label: 'Pending Requests', delta: 'Awaiting review',
     deltaColor: 'text-brand-cyan', icon: AlertCircle,
     iconColor: 'text-brand-cyan', iconBg: 'bg-brand-cyan/10',
     accentBorder: '',
   },
   {
-    label: 'Confirmed Today', value: '08', delta: '+5.4%',
+    label: 'Confirmed', delta: 'All dates',
     deltaColor: 'text-[#D2BBFF]', icon: CheckCircle2,
     iconColor: 'text-[#D2BBFF]', iconBg: 'bg-[#D2BBFF]/10',
     accentBorder: '',
   },
   {
-    label: 'Revenue Forecast', value: '$14,200', delta: 'Weekly',
+    label: 'Booked Value', delta: 'Excl. cancelled',
     deltaColor: 'text-brand-cyan', icon: TrendingUp,
     iconColor: 'text-brand-cyan', iconBg: 'bg-brand-cyan/10',
     accentBorder: 'border-l-2 border-brand-cyan',
@@ -78,8 +79,8 @@ function toBookingRow(b: ApiBooking, i: number): BookingRow {
     role:        b.guestEmail ?? b.client?.email ?? '',
     service:     SERVICE_LABELS[b.serviceType] ?? b.serviceType,
     serviceIcon: SERVICE_ICONS[b.serviceType] ?? '🎵',
-    date:        dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    time:        dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    date:        dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: STUDIO_TZ }),
+    time:        dt.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: STUDIO_TZ }),
     status:      b.status.charAt(0) + b.status.slice(1).toLowerCase(),
     revenue:     `${b.totalAmount.toLocaleString()} ${b.currency}`,
     room:        'Studio A',
@@ -361,9 +362,9 @@ function BookingModal({
   const isView = mode === 'view'
   const isEdit = mode === 'edit'
   
-  const initialDateObj = initialData?.dateTime ? new Date(initialData.dateTime) : null
-  const initialDateStr = initialDateObj ? initialDateObj.toISOString().split('T')[0] : ''
-  const initialTimeStr = initialDateObj ? initialDateObj.toTimeString().slice(0, 5) : '10:00'
+  const initial        = initialData?.dateTime ? toStudioInputs(initialData.dateTime) : null
+  const initialDateStr = initial?.date ?? ''
+  const initialTimeStr = initial?.time ?? '10:00'
   
   const [clientSearch, setClientSearch]       = useState(initialData?.guestName ? `${initialData.guestName} (${initialData.guestEmail})` : initialData?.client?.name || '')
   const [selectedClientId, setSelectedClientId] = useState(initialData?.guestName ? 'guest' : initialData?.client?.id || '')
@@ -386,7 +387,7 @@ function BookingModal({
     e.preventDefault()
     if (isView) return
     
-    const dateTime = date ? `${date}T${time}:00.000Z` : new Date().toISOString()
+    const dateTime = date ? studioDateTime(date, time) : new Date().toISOString()
     
     if (mode === 'create') {
       if (isSuperAdmin && !selectedClientId) return
@@ -707,7 +708,7 @@ export default function BookingsPage() {
           const liveValue =
             card.label === 'Pending Requests'
               ? bookings.filter((b) => b.status === 'Pending').length.toString()
-              : card.label === 'Confirmed Today'
+              : card.label === 'Confirmed'
                 ? bookings.filter((b) => b.status === 'Confirmed').length.toString().padStart(2, '0')
                 : `${liveRevenue.toLocaleString()} RWF`
           return (

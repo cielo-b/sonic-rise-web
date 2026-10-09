@@ -80,7 +80,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
         <AdminSidebar onClose={() => setOpen(false)} />
       </div>
 
-      <div className="flex-1 md:ml-64 min-h-screen flex flex-col">
+      <div className="flex-1 min-w-0 md:ml-64 min-h-screen flex flex-col">
         <div className="md:hidden sticky top-0 z-20 flex items-center gap-3 px-4 py-3 bg-[#0D0E15] border-b border-white/8">
           <button
             onClick={() => setOpen(true)}

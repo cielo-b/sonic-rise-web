@@ -56,9 +56,8 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
     if (!email.trim() || !email.includes('@')) { setError('A valid email is required.'); return }
     setLoading(true)
     try {
-      await api.auth.invite(email.trim(), role === 'Super Admin' ? 'SUPERADMIN' : 'CLIENT')
-      const link = `${typeof window !== 'undefined' ? window.location.origin : ''}/admin/accept-invite?token=sent&email=${encodeURIComponent(email.trim())}`
-      setInviteLink(link)
+      const { inviteUrl } = await api.auth.invite(email.trim(), role === 'Super Admin' ? 'SUPERADMIN' : 'CLIENT')
+      setInviteLink(inviteUrl)
       onInvited(name.trim(), email.trim(), role)
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send invitation.'

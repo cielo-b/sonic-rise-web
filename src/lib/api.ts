@@ -250,7 +250,7 @@ export const api = {
     me: () => request<ApiUser>('/users/me'),
 
     invite: (email: string, role?: string) =>
-      request<void>('/auth/invite', {
+      request<{ inviteUrl: string }>('/auth/invite', {
         method: 'POST',
         body: JSON.stringify({ email, role }),
       }),
@@ -445,7 +445,7 @@ export const api = {
   users: {
     list: () => request<ApiUser[]>('/users'),
     me: () => request<ApiUser>('/users/me'),
-    update: (data: { name?: string; phone?: string; avatarUrl?: string; password?: string }) =>
+    update: (data: { name?: string; phone?: string; avatarUrl?: string; password?: string; currentPassword?: string }) =>
       request<ApiUser>('/users/me', { method: 'PATCH', body: JSON.stringify(data) }),
     deactivate: (id: string) => request<ApiUser>(`/users/${id}`, { method: 'DELETE' }),
     remove: (id: string) => request<void>(`/users/${id}/hard`, { method: 'DELETE' }),
