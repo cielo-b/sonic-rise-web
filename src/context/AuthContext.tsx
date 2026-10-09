@@ -40,11 +40,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   })
 
   const logout = useCallback(() => {
-    const hadToken = !!getToken()
+    const token = getToken()
+    // Revoke on the server while we still hold the token, then forget it.
+    if (token) void api.auth.revokeAll().catch(() => undefined)
     clearToken()
-    qc.clear()
+    // Update the live "me" query (clear() would orphan its observer and keep
+    // showing the old user), then drop everything else except the public studio.
     qc.setQueryData(ME_QUERY_KEY, null)
-    if (hadToken) void api.auth.revokeAll().catch(() => undefined)
+    qc.removeQueries({ predicate: (q) => !['me', 'studio'].includes(String(q.queryKey[0])) })
   }, [qc])
 
   useEffect(() => {
