@@ -20,13 +20,15 @@ const TIME_LABELS: Record<string, string> = {
   '20': 'Late Night (20:00 – 00:00)',
 }
 
+const STUDIO_TZ = 'Africa/Kigali'
+
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: STUDIO_TZ })
 }
 
 function formatTime(iso: string): string {
-  const hour = new Date(iso).getUTCHours().toString().padStart(2, '0')
-  return TIME_LABELS[hour] ?? new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const hour = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: STUDIO_TZ }).format(new Date(iso))
+  return TIME_LABELS[hour] ?? new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: STUDIO_TZ })
 }
 
 function shortRef(id: string): string {
@@ -34,22 +36,41 @@ function shortRef(id: string): string {
 }
 
 export default function BookingConfirmationPage() {
-  const [booking, setBooking] = useState<ApiBooking | null>(null)
+  // undefined = still reading sessionStorage, null = no recent booking
+  const [booking, setBooking] = useState<ApiBooking | null | undefined>(undefined)
 
   useEffect(() => {
-    const raw = sessionStorage.getItem('sr_last_booking')
-    if (raw) {
-      try { setBooking(JSON.parse(raw)) } catch { /* malformed — fall through to static */ }
-    }
+    let parsed: ApiBooking | null = null
+    try { parsed = JSON.parse(sessionStorage.getItem('sr_last_booking') ?? 'null') } catch { /* malformed */ }
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage is only readable after mount
+    setBooking(parsed)
   }, [])
 
-  const ref          = booking ? shortRef(booking.id) : 'SR-2024-08841'
-  const serviceName  = booking ? (SERVICE_LABELS[booking.serviceType] ?? booking.serviceType) : 'Audio Recording'
-  const dateStr      = booking ? formatDate(booking.dateTime) : 'Nov 5, 2024'
-  const timeStr      = booking ? formatTime(booking.dateTime) : 'Afternoon (14:00 – 18:00)'
-  const amount       = booking ? booking.totalAmount.toLocaleString() : '150,000'
-  const currency     = booking ? booking.currency : 'RWF'
-  const guestName    = booking?.guestName ?? booking?.client?.name ?? null
+  if (booking === undefined) return null
+  if (booking === null) {
+    return (
+      <>
+        <Navbar />
+        <main className="min-h-screen pt-32 pb-16">
+          <div className="container-studio max-w-xl mx-auto text-center space-y-5">
+            <h1 className="font-headline text-3xl font-bold text-text-primary">No recent booking found</h1>
+            <p className="text-text-muted">Your booking details are shown here right after you submit a request.</p>
+            <Link href="/booking" className="btn-primary inline-flex gap-2 py-3 px-8 text-sm">Book a Session</Link>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  const ref          = shortRef(booking.id)
+  const serviceName  = SERVICE_LABELS[booking.serviceType] ?? booking.serviceType
+  const dateStr      = formatDate(booking.dateTime)
+  const timeStr      = formatTime(booking.dateTime)
+  const amount       = Number(booking.totalAmount).toLocaleString()
+  const currency     = booking.currency
+  const guestName    = booking.guestName ?? booking.client?.name ?? null
+  const status       = booking.status.charAt(0) + booking.status.slice(1).toLowerCase()
 
   return (
     <>
@@ -66,11 +87,11 @@ export default function BookingConfirmationPage() {
               </div>
             </div>
             <h1 className="font-headline text-4xl md:text-5xl font-extrabold text-text-primary mb-3">
-              Session Confirmed!
+              Request Received!
             </h1>
             <p className="text-text-muted text-lg max-w-md mx-auto">
-              {guestName ? `Thanks, ${guestName}. Your` : 'Your'} booking has been received and confirmed.
-              We&apos;ll send a reminder 24 hours before your session.
+              {guestName ? `Thanks, ${guestName}. Your` : 'Your'} booking request has been received.
+              The studio team will review it and contact you to confirm your slot and arrange payment.
             </p>
           </div>
 
@@ -84,7 +105,7 @@ export default function BookingConfirmationPage() {
                 <p className="font-mono text-2xl font-bold text-text-primary tracking-widest">{ref}</p>
               </div>
               <div className="px-3 py-1.5 rounded-lg bg-brand-cyan/10 border border-brand-cyan/30">
-                <span className="font-mono text-xs text-brand-cyan uppercase tracking-wider">Confirmed</span>
+                <span className="font-mono text-xs text-brand-cyan uppercase tracking-wider">{status}</span>
               </div>
             </div>
 
@@ -109,7 +130,7 @@ export default function BookingConfirmationPage() {
 
             {/* Payment summary */}
             <div className="px-8 py-6 border-b border-white/8 space-y-3">
-              <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-4">Payment Summary</p>
+              <p className="font-mono text-[10px] text-text-muted uppercase tracking-widest mb-4">Estimated Cost</p>
               <div className="flex justify-between text-sm">
                 <span className="text-text-muted">{serviceName}</span>
                 <span className="font-mono text-text-primary">{amount} {currency}</span>
@@ -119,7 +140,7 @@ export default function BookingConfirmationPage() {
                 <span className="font-mono text-text-primary">0 {currency}</span>
               </div>
               <div className="border-t border-white/10 pt-3 flex justify-between font-bold">
-                <span className="text-text-primary">Total Paid</span>
+                <span className="text-text-primary">Amount Due</span>
                 <span className="font-mono text-brand-cyan text-lg">{amount} {currency}</span>
               </div>
             </div>
@@ -147,7 +168,7 @@ export default function BookingConfirmationPage() {
               className="btn-glass flex-1 gap-2 py-3 justify-center text-sm"
               onClick={() => window.print()}
             >
-              <Download size={15} /> Download Receipt
+              <Download size={15} /> Print Summary
             </button>
             <button
               className="btn-glass flex-1 gap-2 py-3 justify-center text-sm"
@@ -165,8 +186,8 @@ export default function BookingConfirmationPage() {
             <h3 className="font-headline text-xl font-bold text-text-primary mb-6">What Happens Next</h3>
             <div className="space-y-5">
               {[
-                { step: '01', title: 'Confirmation Email',    desc: 'A full receipt and session brief will be sent to your inbox within a few minutes.' },
-                { step: '02', title: '24-Hour Reminder',      desc: "We'll send a reminder the day before with prep tips and directions to the studio." },
+                { step: '01', title: 'Request Email',         desc: 'A summary of your request is on its way to your inbox.' },
+                { step: '02', title: 'Studio Confirmation',   desc: 'The team reviews your request and contacts you to confirm the slot and arrange payment.' },
                 { step: '03', title: 'Session Day',           desc: 'Arrive 15 minutes early. Our team will meet you at reception to begin setup.' },
                 { step: '04', title: 'Post-Session Delivery', desc: 'Your final files will be archived and available for download for 30 days.' },
               ].map((item) => (

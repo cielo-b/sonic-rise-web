@@ -1,14 +1,14 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic2, Film, Radio, Podcast,
-  CheckCircle2, HeadphonesIcon, CreditCard, Smartphone,
-  CloudUpload, ChevronDown, ArrowRight, CalendarDays,
-  FileText, X, User, Eye, EyeOff,
+  CheckCircle2, HeadphonesIcon, Info,
+  Link2, ChevronDown, ArrowRight, CalendarDays,
+  User, Eye, EyeOff,
 } from 'lucide-react'
 import { Navbar }  from '@/components/layout/Navbar'
 import { Footer }  from '@/components/layout/Footer'
@@ -23,7 +23,7 @@ interface FormState {
   date:          string
   time:          string
   notes:         string
-  paymentMethod: 'CARD' | 'MOBILE_MONEY'
+  links:         string
   // contact info — used to auto-register the client
   name:     string
   email:    string
@@ -44,7 +44,7 @@ const TIMES = [
   'Late Night (20:00 – 00:00)',
 ]
 
-const STEPS = ['Select Service', 'Date & Time', 'Project Details', 'Reference Files', 'Your Details', 'Payment']
+const STEPS = ['Select Service', 'Date & Time', 'Project Details', 'Reference Links', 'Your Details', 'Review']
 
 const FAQS = [
   {
@@ -71,18 +71,23 @@ const TIME_START: Record<string, string> = {
   'Late Night (20:00 – 00:00)': '20:00',
 }
 
+/** Reference links travel with the booking as part of its notes. */
+function buildNotes(form: FormState): string | undefined {
+  const parts = [form.notes.trim()]
+  if (form.links.trim()) parts.push(`Reference links:\n${form.links.trim()}`)
+  return parts.filter(Boolean).join('\n\n') || undefined
+}
+
 export default function BookingPage() {
   const router = useRouter()
   const { mutate: registerAndBook, isPending: submitting } = useRegisterAndBook()
 
   const [form, setForm] = useState<FormState>({
-    service: 'AUDIO', date: '', time: TIMES[0], notes: '', paymentMethod: 'CARD',
+    service: 'AUDIO', date: '', time: TIMES[0], notes: '', links: '',
     name: '', email: '', phone: '', password: '',
   })
   const [step, setStep] = useState(0)
   const [showPass, setShowPass] = useState(false)
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-  const fileRef = useRef<HTMLInputElement>(null)
 
   function canAdvance(s: number): boolean {
     if (s === 1) return form.date !== ''
@@ -93,13 +98,13 @@ export default function BookingPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const timeStr = form.date
-      ? `${form.date}T${TIME_START[form.time] ?? '09:00'}:00.000Z`
+      ? `${form.date}T${TIME_START[form.time] ?? '09:00'}:00+02:00` // studio time (Africa/Kigali, UTC+2)
       : new Date().toISOString()
 
     registerAndBook(
       {
         contact: { name: form.name, email: form.email, phone: form.phone || undefined, password: form.password },
-        booking: { serviceType: form.service, dateTime: timeStr, totalAmount: BASE_PRICE[form.service], notes: form.notes || undefined },
+        booking: { serviceType: form.service, dateTime: timeStr, totalAmount: BASE_PRICE[form.service], notes: buildNotes(form) },
       },
       {
         onSuccess: ({ booking }) => {
@@ -276,56 +281,21 @@ export default function BookingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-[10px] text-brand-cyan bg-[#000d12] px-2 py-1 rounded">STEP 04</span>
-                        <h3 className="font-headline text-2xl font-semibold text-text-primary">Reference Files</h3>
+                        <h3 className="font-headline text-2xl font-semibold text-text-primary">Reference Links</h3>
                       </div>
-                      <input
-                        ref={fileRef}
-                        type="file"
-                        multiple
-                        accept="audio/*,video/*,image/*,.zip,.pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                          const files = Array.from(e.target.files ?? [])
-                          setUploadedFiles((prev) => [...prev, ...files])
-                          e.target.value = ''
-                        }}
-                      />
-                      <div
-                        onClick={() => fileRef.current?.click()}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault()
-                          const files = Array.from(e.dataTransfer.files)
-                          setUploadedFiles((prev) => [...prev, ...files])
-                        }}
-                        className="border-2 border-dashed border-white/10 rounded-xl p-12 flex flex-col items-center justify-center bg-white/[0.02] hover:bg-white/5 hover:border-brand-cyan/40 transition-colors cursor-pointer group"
-                      >
-                        <CloudUpload size={48} className="text-text-muted group-hover:text-brand-cyan transition-colors mb-4" strokeWidth={1} />
-                        <p className="text-text-primary text-sm">Drag and drop your demo tracks or moodboards</p>
-                        <p className="font-mono text-[10px] text-text-muted mt-1.5">Maximum file size: 500MB · or click to browse</p>
+                      <p className="text-text-muted text-sm">
+                        Share demo tracks, moodboards or references as links (Google Drive, Dropbox, YouTube, SoundCloud…). One per line.
+                      </p>
+                      <div className="relative">
+                        <Link2 size={16} className="absolute left-4 top-4 text-text-muted" />
+                        <textarea
+                          rows={5}
+                          value={form.links}
+                          onChange={(e) => setForm((f) => ({ ...f, links: e.target.value }))}
+                          placeholder="https://drive.google.com/…"
+                          className="input-studio resize-none pl-11 font-mono text-sm"
+                        />
                       </div>
-                      {uploadedFiles.length > 0 && (
-                        <div className="space-y-2 mt-1">
-                          {uploadedFiles.map((file, i) => (
-                            <div key={i} className="flex items-center justify-between px-4 py-2.5 rounded-lg bg-white/5 border border-white/10">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <FileText size={14} className="text-brand-cyan shrink-0" />
-                                <span className="text-sm text-text-primary truncate">{file.name}</span>
-                                <span className="font-mono text-[10px] text-text-muted shrink-0">
-                                  {(file.size / (1024 * 1024)).toFixed(1)} MB
-                                </span>
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => setUploadedFiles((prev) => prev.filter((_, idx) => idx !== i))}
-                                className="ml-3 text-text-muted hover:text-red-400 transition-colors shrink-0"
-                              >
-                                <X size={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </motion.div>
                   )}
 
@@ -381,7 +351,7 @@ export default function BookingPage() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="font-mono text-xs text-text-muted">Create Password</label>
+                          <label className="font-mono text-xs text-text-muted">Password <span className="opacity-60">(booked before? use your existing one)</span></label>
                           <div className="relative">
                             <input
                               type={showPass ? 'text' : 'password'}
@@ -416,7 +386,7 @@ export default function BookingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-[10px] text-brand-cyan bg-[#000d12] px-2 py-1 rounded">STEP 06</span>
-                        <h3 className="font-headline text-2xl font-semibold text-text-primary">Payment</h3>
+                        <h3 className="font-headline text-2xl font-semibold text-text-primary">Review &amp; Request</h3>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -435,117 +405,23 @@ export default function BookingPage() {
                               <span className="text-text-primary font-mono">0 RWF</span>
                             </div>
                             <div className="border-t border-white/10 pt-3 flex justify-between font-bold">
-                              <span>Total</span>
+                              <span>Estimated Total</span>
                               <span className="text-brand-cyan font-mono text-lg">
                                 {BASE_PRICE[form.service].toLocaleString()} RWF
                               </span>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <input
-                              type="text"
-                              placeholder="Discount Code"
-                              className="input-studio text-sm py-2 flex-1"
-                            />
-                            <button type="button" className="btn-glass text-sm py-2 px-4">Apply</button>
-                          </div>
                         </div>
 
-                        {/* Right: Payment method selection */}
-                        <div className="space-y-3">
-                          <h4 className="font-mono text-xs uppercase tracking-widest text-text-muted">Payment Methods</h4>
-
-                          {/* Card option */}
-                          <label className="cursor-pointer block">
-                            <input
-                              type="radio"
-                              name="payment"
-                              className="hidden peer"
-                              checked={form.paymentMethod === 'CARD'}
-                              onChange={() => setForm((f) => ({ ...f, paymentMethod: 'CARD' }))}
-                            />
-                            <div className="p-4 rounded-xl border border-white/10 bg-[#1b1b23] peer-checked:border-brand-cyan peer-checked:bg-brand-cyan/5 transition-all">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <CreditCard size={16} className="text-text-muted" />
-                                  <span className="font-mono text-xs text-text-primary">Credit / Debit Card</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {/* Visa */}
-                                  <div className="h-5 px-1.5 rounded bg-[#1A1F71] flex items-center">
-                                    <span className="font-bold text-[9px] text-white tracking-wider">VISA</span>
-                                  </div>
-                                  {/* Mastercard */}
-                                  <div className="h-5 flex items-center gap-[-4px]">
-                                    <div className="w-4 h-4 rounded-full bg-[#EB001B] opacity-90" />
-                                    <div className="w-4 h-4 rounded-full bg-[#F79E1B] -ml-2 opacity-90" />
-                                  </div>
-                                </div>
-                              </div>
-                              {form.paymentMethod === 'CARD' && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  className="space-y-2 pt-2 border-t border-white/10"
-                                >
-                                  <input
-                                    type="text"
-                                    placeholder="Card number"
-                                    className="input-studio text-sm py-2 font-mono"
-                                  />
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <input type="text" placeholder="MM / YY" className="input-studio text-sm py-2" />
-                                    <input type="text" placeholder="CVV" className="input-studio text-sm py-2" />
-                                  </div>
-                                </motion.div>
-                              )}
-                            </div>
-                          </label>
-
-                          {/* Mobile Money option */}
-                          <label className="cursor-pointer block">
-                            <input
-                              type="radio"
-                              name="payment"
-                              className="hidden peer"
-                              checked={form.paymentMethod === 'MOBILE_MONEY'}
-                              onChange={() => setForm((f) => ({ ...f, paymentMethod: 'MOBILE_MONEY' }))}
-                            />
-                            <div className="p-4 rounded-xl border border-white/10 bg-[#1b1b23] peer-checked:border-brand-cyan peer-checked:bg-brand-cyan/5 transition-all">
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <Smartphone size={16} className="text-text-muted" />
-                                  <span className="font-mono text-xs text-text-primary">Mobile Money</span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                  {/* MTN */}
-                                  <div className="h-5 px-1.5 rounded bg-[#FFCC00] flex items-center">
-                                    <span className="font-bold text-[8px] text-black tracking-wider">MTN</span>
-                                  </div>
-                                  {/* Airtel */}
-                                  <div className="h-5 px-1.5 rounded bg-[#E40000] flex items-center">
-                                    <span className="font-bold text-[8px] text-white tracking-wider">AIRTEL</span>
-                                  </div>
-                                </div>
-                              </div>
-                              {form.paymentMethod === 'MOBILE_MONEY' && (
-                                <motion.div
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  className="space-y-2 pt-2 border-t border-white/10"
-                                >
-                                  <input
-                                    type="tel"
-                                    placeholder="+250 7XX XXX XXX"
-                                    className="input-studio text-sm py-2 font-mono"
-                                  />
-                                </motion.div>
-                              )}
-                            </div>
-                          </label>
-
-                          <p className="text-center font-mono text-[10px] text-text-muted">
-                            🔒 Secure encrypted payment processing
+                        <div className="bg-[#1b1b23] rounded-xl p-5 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Info size={16} className="text-brand-cyan" />
+                            <h4 className="font-mono text-xs uppercase tracking-widest text-text-muted">No payment now</h4>
+                          </div>
+                          <p className="text-sm text-text-muted leading-relaxed">
+                            Your request goes to the studio team as pending. Once they confirm your slot, they&apos;ll
+                            contact you at <span className="text-text-primary">{form.email || 'your email'}</span> to
+                            arrange payment by Mobile Money or card.
                           </p>
                         </div>
                       </div>
@@ -564,6 +440,7 @@ export default function BookingPage() {
                   </button>
                   {step < STEPS.length - 1 ? (
                     <button
+                      key="next"
                       type="button"
                       onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
                       disabled={!canAdvance(step)}
@@ -573,11 +450,12 @@ export default function BookingPage() {
                     </button>
                   ) : (
                     <button
+                      key="submit"
                       type="submit"
                       disabled={submitting}
                       className="btn-primary text-base px-10 py-4 disabled:opacity-60"
                     >
-                      {submitting ? 'Processing…' : 'Complete Booking & Pay'}
+                      {submitting ? 'Processing…' : 'Request Booking'}
                     </button>
                   )}
                 </div>

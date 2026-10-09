@@ -44,6 +44,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string, remember: boolean) => {
     const data = await api.auth.login(email, password)
+    if ('requires2FA' in data) {
+      throw new Error('Two-factor sign-in is not supported in this panel yet.')
+    }
     applySession(data, remember)
     setUser({ ...data.user })
     // Seed the TanStack cache so useMe() resolves immediately

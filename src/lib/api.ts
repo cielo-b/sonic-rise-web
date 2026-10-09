@@ -130,6 +130,13 @@ export function clearToken() {
   sessionStorage.removeItem('sr_token')
 }
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 // ─── Core fetch wrapper ────────────────────────────────────────────────────────
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'
@@ -153,7 +160,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     }
 
     const body = await res.json().catch(() => ({}))
-    let rawMsg = body.message
+    const rawMsg = body.message
     let msg: string | undefined
 
     if (Array.isArray(rawMsg)) {
@@ -164,7 +171,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       msg = rawMsg
     }
 
-    throw new Error(msg || (res.status === 401 ? 'Unauthorized' : `HTTP ${res.status}`))
+    throw new ApiError(msg || (res.status === 401 ? 'Unauthorized' : `HTTP ${res.status}`), res.status)
   }
 
   if (res.status === 204) return undefined as T
@@ -173,51 +180,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return JSON.parse(text)
 }
 
-async function upload<T>(path: string, file: File): Promise<T> {
-  const token = getToken()
-  const headers: Record<string, string> = {}
-  if (token) headers['Authorization'] = `Bearer ${token}`
-
-  const fd = new FormData()
-  fd.append('file', file)
-
-  const res = await fetch(`${BASE}${path}`, { method: 'POST', headers, body: fd })
-
-  if (!res.ok) {
-    if (res.status === 401) {
-      clearToken()
-      if (typeof window !== 'undefined') window.location.href = '/admin/login'
-    }
-
-    const body = await res.json().catch(() => ({}))
-    let rawMsg = body.message
-    let msg: string | undefined
-
-    if (Array.isArray(rawMsg)) {
-      msg = rawMsg.join(', ')
-    } else if (typeof rawMsg === 'object' && rawMsg !== null) {
-      msg = rawMsg.message || JSON.stringify(rawMsg)
-    } else {
-      msg = rawMsg
-    }
-
-    throw new Error(msg || (res.status === 401 ? 'Unauthorized' : `HTTP ${res.status}`))
-  }
-  return res.json()
-}
-
-export const uploadToCloudinary = (
+/** Uploads a file to one of the API's MinIO-backed `/upload` endpoints. */
+const uploadFile = (
+  path: string,
   file: File,
   onProgress?: (percent: number) => void
 ): Promise<{ url: string; type: string; size: string; name: string }> => {
   return new Promise((resolve, reject) => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'demo'
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'unsigned_preset'
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`
-
     const xhr = new XMLHttpRequest()
-    xhr.open('POST', url)
-    
+    xhr.open('POST', `${BASE}${path}`)
+    const token = getToken()
+    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`)
+
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable && onProgress) {
         onProgress(Math.round((e.loaded * 100) / e.total))
@@ -225,21 +199,19 @@ export const uploadToCloudinary = (
     }
 
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        const res = JSON.parse(xhr.responseText)
+      let body: { url?: string; type?: string; size?: string; name?: string; message?: unknown } = {}
+      try { body = JSON.parse(xhr.responseText) } catch {}
+      if (xhr.status >= 200 && xhr.status < 300 && body.url) {
+        const mime = file.type
         resolve({
-          url: res.secure_url,
-          type: res.resource_type === 'video' && res.format === 'mp3' ? 'audio' : res.resource_type,
-          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-          name: file.name
+          url: body.url,
+          type: body.type ?? (mime.startsWith('video/') ? 'video' : mime.startsWith('audio/') ? 'audio' : 'image'),
+          size: body.size ?? `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+          name: body.name ?? file.name,
         })
       } else {
-        try {
-          const errRes = JSON.parse(xhr.responseText)
-          reject(new Error(errRes.error?.message || 'Cloudinary upload failed'))
-        } catch {
-          reject(new Error(xhr.statusText || 'Upload failed'))
-        }
+        const msg = typeof body.message === 'string' ? body.message : xhr.statusText
+        reject(new ApiError(msg || 'Upload failed', xhr.status))
       }
     }
 
@@ -247,8 +219,6 @@ export const uploadToCloudinary = (
 
     const fd = new FormData()
     fd.append('file', file)
-    fd.append('upload_preset', uploadPreset)
-
     xhr.send(fd)
   })
 }
@@ -258,7 +228,7 @@ export const uploadToCloudinary = (
 export const api = {
   auth: {
     login: (email: string, password: string) =>
-      request<AuthResponse>('/auth/login', {
+      request<AuthResponse | { requires2FA: true; tempToken: string }>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       }),
@@ -344,7 +314,7 @@ export const api = {
   portfolio: {
     list: () => request<ApiPortfolioItem[]>('/portfolio'),
     featured: () => request<ApiPortfolioItem[]>('/portfolio/featured'),
-    upload: (file: File, onProgress?: (p: number) => void) => uploadToCloudinary(file, onProgress),
+    upload: (file: File, onProgress?: (p: number) => void) => uploadFile('/portfolio/upload', file, onProgress),
 
     create: (data: {
       title: string
@@ -376,7 +346,7 @@ export const api = {
 
   media: {
     list: () => request<ApiMediaAsset[]>('/media'),
-    upload: (file: File, onProgress?: (p: number) => void) => uploadToCloudinary(file, onProgress),
+    upload: (file: File, onProgress?: (p: number) => void) => uploadFile('/media/upload', file, onProgress),
 
     create: (data: {
       name: string

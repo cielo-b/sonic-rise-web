@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { api, clearToken } from '@/lib/api'
+import { api, clearToken, ApiError } from '@/lib/api'
 
 // ─── Query keys ───────────────────────────────────────────────────────────────
 
@@ -217,6 +217,31 @@ export function useCreateBooking() {
   })
 }
 
+/**
+ * Returning customers already have an account, so a 409 from register falls
+ * back to logging in with the password they entered.
+ */
+async function registerOrLogin(contact: Parameters<typeof api.auth.register>[0]) {
+  try {
+    return await api.auth.register(contact)
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 409) throw err
+  }
+  let res: Awaited<ReturnType<typeof api.auth.login>>
+  try {
+    res = await api.auth.login(contact.email, contact.password)
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      throw new Error('An account with this email already exists. Enter the password you used before, or reset it via "Forgot password".')
+    }
+    throw err
+  }
+  if ('requires2FA' in res) {
+    throw new Error('This account has two-factor authentication enabled. Please sign in first, then book.')
+  }
+  return res
+}
+
 export function useRegisterAndBook() {
   return useMutation({
     mutationFn: async ({
@@ -226,7 +251,7 @@ export function useRegisterAndBook() {
       contact: Parameters<typeof api.auth.register>[0]
       booking: Parameters<typeof api.bookings.create>[0]
     }) => {
-      const auth = await api.auth.register(contact)
+      const auth = await registerOrLogin(contact)
       sessionStorage.setItem('sr_token', auth.access_token)
       try {
         const newBooking = await api.bookings.create(booking)

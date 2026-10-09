@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { Menu, ShieldOff } from 'lucide-react'
 import { AdminSidebar } from '@/components/layout/AdminSidebar'
 import { AuthProvider } from '@/context/AuthContext'
-import { routeAllowed, type Role } from '@/lib/roles'
+import { routeAllowed, roleFromToken, type Role } from '@/lib/roles'
 
 function NotAuthorized() {
   return (
@@ -51,12 +51,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
       return
     }
 
-    const storedRole = (
-      (sessionStorage.getItem('sr_admin_role') as Role) ||
-      (localStorage.getItem('sr_admin_role') as Role) ||
-      'Super Admin'
-    )
-    setRole(storedRole)
+    // UI gating only — the API enforces roles on every request.
+    setRole(roleFromToken(token))
     setChecked(true)
   }, [isAuthPage, router])
 

@@ -5,6 +5,16 @@ export function toRole(apiRole: ApiRole): Role {
   return apiRole === 'SUPERADMIN' ? 'Super Admin' : 'Client'
 }
 
+/** Reads the role claim from the JWT; anything unreadable is treated as a client. */
+export function roleFromToken(token: string): Role {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return toRole(payload.role as ApiRole)
+  } catch {
+    return 'Client'
+  }
+}
+
 export const PERMISSIONS = {
   'revenue:view':      ['Super Admin'],
   'bookings:write':    ['Super Admin', 'Client'],
