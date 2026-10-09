@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Sora, Geist, JetBrains_Mono } from 'next/font/google'
-import { QueryProvider } from '@/providers/QueryProvider'
+import { Providers } from '@/providers/Providers'
 import { Toaster } from 'sonner'
 import './globals.css'
 
@@ -27,12 +27,9 @@ const jetbrainsMono = JetBrains_Mono({
 
 // ─── Metadata ─────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
-  title: {
-    default: 'SonicRise Cinematic Studio',
-    template: '%s | SonicRise',
-  },
-  description: "Rwanda's premier cinematic creative studio — music production, film, and visual storytelling.",
-  keywords: ['SonicRise', 'Rwanda', 'cinematic studio', 'music production', 'film production'],
+  // The studio's name replaces this at runtime (StudioProvider).
+  title: 'Studio',
+  description: 'Book sessions, review files and pay online.',
 }
 
 export const viewport: Viewport = {
@@ -49,7 +46,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`dark ${sora.variable} ${geist.variable} ${jetbrainsMono.variable}`}
     >
       <body className="min-h-screen bg-bg-main text-text-primary antialiased">
-        <QueryProvider>
+        <Providers>
           {children}
           <Toaster
             theme="dark"
@@ -63,7 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               },
             }}
           />
-        </QueryProvider>
+        </Providers>
       </body>
     </html>
   )
