@@ -3,12 +3,13 @@
 import { Suspense, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Wrench, QrCode } from 'lucide-react'
 import { toast } from 'sonner'
-import { api, type Equipment, type PricingType, type Room, type ServicePackage } from '@/lib/api'
+import { api, type Equipment, type EquipmentStatus, type PricingType, type Room, type ServicePackage } from '@/lib/api'
 import { useRequiredStudio } from '@/context/StudioContext'
 import { duration, money } from '@/lib/format'
 import { Button, Card, Checkbox, ConfirmButton, EmptyState, Field, ImageUpload, Input, Loading, Modal, PageHeader, Select, Tabs, Textarea, errorMessage } from '@/components/ui'
+import { MaintenanceModal } from '@/components/admin/MaintenanceModal'
 
 type Tab = 'packages' | 'rooms' | 'equipment'
 
@@ -264,7 +265,18 @@ function Rooms() {
 function EquipmentForm({ item, open, onClose }: { item: Equipment | null; open: boolean; onClose: () => void }) {
   const studio = useRequiredStudio()
   const { busy, save } = useSaver(['equipment', 'all'])
-  const init = () => ({ name: item?.name ?? '', category: item?.category ?? '', description: item?.description ?? '', price: item ? String(item.pricePerBooking) : '0', isActive: item?.isActive ?? true })
+  const init = () => ({
+    name: item?.name ?? '',
+    category: item?.category ?? '',
+    description: item?.description ?? '',
+    price: item ? String(item.pricePerBooking) : '0',
+    serialNumber: item?.serialNumber ?? '',
+    barcode: item?.barcode ?? '',
+    status: item?.status ?? ('OPERATIONAL' as EquipmentStatus),
+    purchaseDate: item?.purchaseDate ?? '',
+    purchasePrice: item?.purchasePrice !== undefined && item?.purchasePrice !== null ? String(item.purchasePrice) : '',
+    isActive: item?.isActive ?? true,
+  })
   const [f, setF] = useState(init)
   const [lastId, setLastId] = useState<string | null | undefined>(undefined)
   if (open && lastId !== (item?.id ?? null)) {
@@ -273,20 +285,49 @@ function EquipmentForm({ item, open, onClose }: { item: Equipment | null; open: 
   }
   if (!open && lastId !== undefined) setLastId(undefined)
   return (
-    <Modal open={open} onClose={onClose} title={item ? 'Edit equipment' : 'New equipment'} footer={<><Button variant="glass" onClick={onClose}>Cancel</Button><Button type="submit" form="eq-form" loading={busy}>Save</Button></>}>
+    <Modal open={open} onClose={onClose} title={item ? 'Edit equipment' : 'New equipment'} wide footer={<><Button variant="glass" onClick={onClose}>Cancel</Button><Button type="submit" form="eq-form" loading={busy}>Save</Button></>}>
       <form
         id="eq-form"
         className="space-y-3"
         onSubmit={(e) => {
           e.preventDefault()
-          const data = { name: f.name.trim(), category: f.category.trim() || undefined, description: f.description.trim() || undefined, pricePerBooking: Number(f.price) || 0, isActive: f.isActive } as Partial<Equipment>
+          const data = {
+            name: f.name.trim(),
+            category: f.category.trim() || undefined,
+            description: f.description.trim() || undefined,
+            pricePerBooking: Number(f.price) || 0,
+            serialNumber: f.serialNumber.trim() || undefined,
+            barcode: f.barcode.trim() || undefined,
+            status: f.status,
+            purchaseDate: f.purchaseDate || undefined,
+            purchasePrice: f.purchasePrice ? Number(f.purchasePrice) : undefined,
+            isActive: f.isActive,
+          } as Partial<Equipment>
           void save(() => (item ? api.equipment.update(item.id, data) : api.equipment.create(data)), onClose)
         }}
       >
-        <Field label="Name"><Input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
-        <Field label="Category" hint="e.g. Microphone, Camera, Lighting"><Input value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} /></Field>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Field label="Name"><Input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
+          <Field label="Category" hint="e.g. Microphone, Outboard, Monitoring, Guitar"><Input value={f.category} onChange={(e) => setF({ ...f, category: e.target.value })} /></Field>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <Field label="Serial Number" hint="Hardware serial"><Input placeholder="e.g. SN-849102" value={f.serialNumber} onChange={(e) => setF({ ...f, serialNumber: e.target.value })} /></Field>
+          <Field label="Barcode / Asset Tag" hint="Scan or inventory ID"><Input placeholder="e.g. BC-0042" value={f.barcode} onChange={(e) => setF({ ...f, barcode: e.target.value })} /></Field>
+          <Field label="Status">
+            <Select value={f.status} onChange={(e) => setF({ ...f, status: e.target.value as EquipmentStatus })}>
+              <option value="OPERATIONAL">Operational</option>
+              <option value="NEEDS_MAINTENANCE">Needs Maintenance</option>
+              <option value="IN_REPAIR">In Repair</option>
+              <option value="RETIRED">Retired</option>
+            </Select>
+          </Field>
+        </div>
         <Field label="Description"><Textarea rows={2} value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></Field>
-        <Field label={`Extra charge per booking (${studio.currency})`} hint="0 = included"><Input type="number" min={0} value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></Field>
+        <div className="grid sm:grid-cols-3 gap-3">
+          <Field label={`Charge per booking (${studio.currency})`} hint="0 = included"><Input type="number" min={0} value={f.price} onChange={(e) => setF({ ...f, price: e.target.value })} /></Field>
+          <Field label="Purchase Date"><input type="date" className="input-studio text-sm w-full" value={f.purchaseDate} onChange={(e) => setF({ ...f, purchaseDate: e.target.value })} /></Field>
+          <Field label={`Purchase Price (${studio.currency})`}><Input type="number" min={0} value={f.purchasePrice} onChange={(e) => setF({ ...f, purchasePrice: e.target.value })} /></Field>
+        </div>
         <Checkbox checked={f.isActive} onChange={(e) => setF({ ...f, isActive: e.target.checked })} label="Active (can be reserved)" />
       </form>
     </Modal>
@@ -295,10 +336,20 @@ function EquipmentForm({ item, open, onClose }: { item: Equipment | null; open: 
 
 function EquipmentList() {
   const studio = useRequiredStudio()
+  const qc = useQueryClient()
   const q = useQuery({ queryKey: ['equipment', 'all'], queryFn: api.equipment.all })
   const [edit, setEdit] = useState<Equipment | null | 'new'>(null)
+  const [maintenanceItem, setMaintenanceItem] = useState<Equipment | null>(null)
   const { save } = useSaver(['equipment', 'all'])
   if (q.isLoading) return <Loading />
+
+  const statusBadges: Record<EquipmentStatus, { label: string; cls: string }> = {
+    OPERATIONAL: { label: 'Operational', cls: 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40' },
+    NEEDS_MAINTENANCE: { label: 'Needs Maintenance', cls: 'bg-amber-500/20 text-amber-400 border border-amber-500/40' },
+    IN_REPAIR: { label: 'In Repair', cls: 'bg-rose-500/20 text-rose-400 border border-rose-500/40' },
+    RETIRED: { label: 'Retired', cls: 'bg-white/10 text-text-muted border border-white/20' },
+  }
+
   return (
     <>
       <div className="flex justify-end mb-4"><Button onClick={() => setEdit('new')}><Plus size={16} /> New equipment</Button></div>
@@ -306,22 +357,49 @@ function EquipmentList() {
         <EmptyState title="No equipment listed">List gear that clients can reserve with a session. Each item can only be in one session at a time.</EmptyState>
       ) : (
         <div className="glass-card rounded-xl divide-y divide-white/5">
-          {q.data.map((g) => (
-            <div key={g.id} className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3 ${g.isActive ? '' : 'opacity-50'}`}>
-              <div>
-                <p className="font-medium">{g.name} {g.category && <span className="text-xs text-outline ml-1">{g.category}</span>}</p>
-                {g.description && <p className="text-xs text-text-muted">{g.description}</p>}
+          {q.data.map((g) => {
+            const st = statusBadges[g.status ?? 'OPERATIONAL']
+            return (
+              <div key={g.id} className={`flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 ${g.isActive ? '' : 'opacity-50'}`}>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-text-primary">{g.name}</p>
+                    {g.category && <span className="text-xs text-outline">{g.category}</span>}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${st.cls}`}>
+                      {st.label}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-text-muted font-mono">
+                    {g.serialNumber && <span>SN: <strong className="text-text-primary">{g.serialNumber}</strong></span>}
+                    {g.barcode && <span className="flex items-center gap-1"><QrCode size={12} className="text-brand-cyan" /> {g.barcode}</span>}
+                    {g.lastMaintainedAt && <span className="text-outline">Serviced: {g.lastMaintainedAt.slice(0, 10)}</span>}
+                  </div>
+                  {g.description && <p className="text-xs text-text-muted mt-1">{g.description}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-mono mr-2">{g.pricePerBooking > 0 ? money(g.pricePerBooking, studio.currency) : 'Included'}</span>
+                  <Button variant="glass" size="sm" onClick={() => setMaintenanceItem(g)} title="Maintenance history & calibrations">
+                    <Wrench size={13} className="mr-1 text-brand-cyan" /> Maintenance
+                  </Button>
+                  <Button variant="quiet" size="sm" onClick={() => setEdit(g)}>Edit</Button>
+                  <ConfirmButton variant="quiet" size="sm" onConfirm={async () => { const r = await api.equipment.remove(g.id); await save(async () => r, () => undefined, removeLabel(r)) }}>Delete</ConfirmButton>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-mono">{g.pricePerBooking > 0 ? money(g.pricePerBooking, studio.currency) : 'Included'}</span>
-                <Button variant="quiet" onClick={() => setEdit(g)}>Edit</Button>
-                <ConfirmButton variant="quiet" onConfirm={async () => { const r = await api.equipment.remove(g.id); await save(async () => r, () => undefined, removeLabel(r)) }}>Delete</ConfirmButton>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
       <EquipmentForm open={!!edit} onClose={() => setEdit(null)} item={edit === 'new' ? null : edit} />
+      <MaintenanceModal
+        open={!!maintenanceItem}
+        onClose={() => setMaintenanceItem(null)}
+        item={maintenanceItem}
+        currency={studio.currency}
+        onUpdated={() => {
+          void qc.invalidateQueries({ queryKey: ['equipment', 'all'] })
+          setMaintenanceItem(null)
+        }}
+      />
     </>
   )
 }

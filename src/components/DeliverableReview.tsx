@@ -11,9 +11,29 @@ import { useI18n } from '@/lib/i18n'
 import { bytes, formatDateTime, money, timecode } from '@/lib/format'
 import { Avatar, Badge, Button, Card, ErrorState, Field, Input, Loading, Select, Textarea, errorMessage } from './ui'
 import { PayMobileMoney } from './PayMobileMoney'
+import { WaveformPlayer } from './WaveformPlayer'
+import { StemsMixer } from './StemsMixer'
 
-function Player({ url, mime, mediaRef }: { url: string; mime: string; mediaRef: React.RefObject<HTMLMediaElement | null> }) {
-  if (mime.startsWith('audio/')) return <audio ref={mediaRef as React.RefObject<HTMLAudioElement>} src={url} controls className="w-full" />
+function Player({
+  url,
+  mime,
+  mediaRef,
+  commentMarkers,
+}: {
+  url: string
+  mime: string
+  mediaRef: React.RefObject<HTMLMediaElement | null>
+  commentMarkers?: { id: string; atSeconds: number; body: string; authorName?: string }[]
+}) {
+  if (mime.startsWith('audio/')) {
+    return (
+      <WaveformPlayer
+        url={url}
+        audioRef={mediaRef as React.RefObject<HTMLAudioElement>}
+        commentMarkers={commentMarkers}
+      />
+    )
+  }
   if (mime.startsWith('video/')) return <video ref={mediaRef as React.RefObject<HTMLVideoElement>} src={url} controls className="w-full rounded-lg bg-black max-h-[60vh]" />
   if (mime.startsWith('image/')) {
     // eslint-disable-next-line @next/next/no-img-element -- signed private file URL
@@ -81,7 +101,20 @@ export function DeliverableReview({ id }: { id: string }) {
             <p className="text-xs text-text-muted">{d.project.title}</p>
             <h2 className="font-headline text-2xl font-bold">{d.title}</h2>
           </div>
-          <Badge status={d.status} />
+          <div className="flex items-center gap-2">
+            <a
+              href={`https://wa.me/?text=${encodeURIComponent(
+                `🎧 *SonicRise Studio Track Review*\nTrack: *${d.title}* (${d.project.title})\nStatus: ${d.status}\n\nListen, comment with timecodes, and approve:\n${typeof window !== 'undefined' ? window.location.href : ''}`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-glass text-xs py-1.5 px-3 text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5"
+              title="Share review link directly via WhatsApp"
+            >
+              <MessageSquare size={13} /> WhatsApp
+            </a>
+            <Badge status={d.status} />
+          </div>
         </div>
         {d.description && <p className="text-sm text-text-muted whitespace-pre-line">{d.description}</p>}
 
@@ -103,9 +136,34 @@ export function DeliverableReview({ id }: { id: string }) {
                 </span>
               )}
             </div>
-            {stream.data && version && <Player url={stream.data.url} mime={version.mimeType} mediaRef={media} />}
+            {stream.data && version && (
+              <Player
+                url={stream.data.url}
+                mime={version.mimeType}
+                mediaRef={media}
+                commentMarkers={versionComments
+                  .filter((c) => c.atSeconds !== null)
+                  .map((c) => ({
+                    id: c.id,
+                    atSeconds: c.atSeconds!,
+                    body: c.body,
+                    authorName: c.author?.name,
+                  }))}
+              />
+            )}
             {version?.note && <p className="text-sm text-text-muted whitespace-pre-line">{version.note}</p>}
           </Card>
+        )}
+
+        {/* Multi-Track Stems Mixer */}
+        {version && (version.stems?.length || isStaff) && (
+          <StemsMixer
+            deliverableId={d.id}
+            versionId={version.id}
+            stems={version.stems || []}
+            isStaff={isStaff}
+            onStemsUpdated={update}
+          />
         )}
 
         <Card className="p-5 space-y-4">

@@ -29,6 +29,7 @@ import { useStudio } from '@/context/StudioContext'
 import { StudioMark } from '@/components/site/SiteShell'
 import type { Permission } from '@/lib/roles'
 import { ROLE_LABEL } from '@/lib/labels'
+import { useLiveSync } from '@/lib/useLiveSync'
 import { Avatar, Loading } from '../ui'
 
 interface NavItem {
@@ -87,6 +88,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  useLiveSync()
 
   useEffect(() => {
     if (isLoading) return

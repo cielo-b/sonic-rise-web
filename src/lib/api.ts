@@ -134,12 +134,29 @@ export interface Room {
   sortOrder: number
 }
 
+export type EquipmentStatus = 'OPERATIONAL' | 'NEEDS_MAINTENANCE' | 'IN_REPAIR' | 'RETIRED'
+
 export interface Equipment {
   id: string
   name: string
   category: string | null
   description: string | null
   pricePerBooking: number
+  serialNumber?: string | null
+  barcode?: string | null
+  purchaseDate?: string | null
+  purchasePrice?: number | null
+  status?: EquipmentStatus
+  lastMaintainedAt?: string | null
+  maintenanceNotes?: string | null
+  maintenanceHistory?: Array<{
+    id: string
+    date: string
+    technician: string
+    description: string
+    cost?: number
+    nextScheduledDate?: string
+  }>
   isActive: boolean
 }
 
@@ -283,6 +300,49 @@ export interface Deliverable {
   createdAt: string
 }
 
+export interface StemTrack {
+  id: string
+  name: string
+  fileKey?: string
+  fileName: string
+  mimeType: string
+  sizeBytes: string
+  url?: string
+}
+
+export type ContractStatus = 'DRAFT' | 'PENDING_SIGNATURES' | 'SIGNED'
+
+export interface SplitContributor {
+  id: string
+  name: string
+  email: string
+  role: string
+  masterShare: number
+  publishingShare: number
+  proAffiliation?: string
+  ipiNumber?: string
+  signedAt?: string
+  signatureData?: string
+}
+
+export interface Contract {
+  id: string
+  studioId: string
+  projectId: string
+  title: string
+  trackTitle: string
+  type: string
+  status: ContractStatus
+  splits: SplitContributor[]
+  terms: string | null
+  clientSignature: string | null
+  clientSignedAt: string | null
+  staffSignature: string | null
+  staffSignedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface DeliverableDetail extends Deliverable {
   project: { id: string; title: string; clientId: string }
   canDownload: boolean
@@ -293,6 +353,7 @@ export interface DeliverableDetail extends Deliverable {
     mimeType: string
     sizeBytes: string
     note: string | null
+    stems?: StemTrack[]
     uploadedBy: PublicUser | null
     createdAt: string
   }[]
@@ -629,6 +690,8 @@ export const api = {
     all: () => get<Equipment[]>('/equipment/all'),
     create: (data: Partial<Equipment>) => post<Equipment>('/equipment', data),
     update: (id: string, data: Partial<Equipment>) => patch<Equipment>(`/equipment/${id}`, data),
+    addMaintenance: (id: string, data: { technician?: string; description: string; cost?: number; nextScheduledDate?: string; status?: EquipmentStatus }) =>
+      post<Equipment>(`/equipment/${id}/maintenance`, data),
     remove: (id: string) => del<{ deleted?: true; deactivated?: true }>(`/equipment/${id}`),
   },
   packages: {
@@ -666,6 +729,8 @@ export const api = {
       patch<Booking>(`/bookings/${id}`, data),
     cancel: (id: string, reason?: string) => post<Booking & { lateCancellation: boolean }>(`/bookings/${id}/cancel`, { reason }),
     remove: (id: string) => del(`/bookings/${id}`),
+    calendarIcsUrl: (engineerId?: string) =>
+      `${BASE}/bookings/calendar.ics${qs({ engineerId, studio: studioSlug() || undefined })}`,
   },
 
   payments: {
@@ -727,8 +792,22 @@ export const api = {
     comment: (id: string, data: { body: string; atSeconds?: number; versionId?: string }) => post<DeliverableDetail>(`/deliverables/${id}/comments`, data),
     resolveComment: (id: string, commentId: string, resolved: boolean) =>
       patch<DeliverableDetail>(`/deliverables/${id}/comments/${commentId}`, { resolved }),
+    uploadStem: (id: string, versionId: string, file: File, name: string, onProgress?: (p: number) => void) =>
+      upload<DeliverableDetail>(`/deliverables/${id}/versions/${versionId}/stems`, file, { name }, onProgress),
+    deleteStem: (id: string, versionId: string, stemId: string) =>
+      del<DeliverableDetail>(`/deliverables/${id}/versions/${versionId}/stems/${stemId}`),
     approve: (id: string) => post<DeliverableDetail>(`/deliverables/${id}/approve`),
     requestChanges: (id: string, body: string) => post<DeliverableDetail>(`/deliverables/${id}/request-changes`, { body }),
+  },
+
+  contracts: {
+    list: (projectId: string) => get<Contract[]>(`/contracts/project/${projectId}`),
+    get: (id: string) => get<Contract>(`/contracts/${id}`),
+    create: (projectId: string, data: { title: string; trackTitle: string; type?: string; splits: SplitContributor[]; terms?: string }) =>
+      post<Contract>(`/contracts/project/${projectId}`, data),
+    sign: (id: string, data: { signatureData: string; contributorId?: string }) =>
+      post<Contract>(`/contracts/${id}/sign`, data),
+    remove: (id: string) => del(`/contracts/${id}`),
   },
 
   clients: {

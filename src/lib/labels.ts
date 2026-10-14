@@ -39,8 +39,8 @@ export const PURPOSE_LABEL: Record<PaymentPurpose, string> = {
 }
 
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
-  MOBILE_MONEY: 'Mobile money',
+  MOBILE_MONEY: 'Mobile Money (MTN MoMo / Airtel Money)',
   CASH: 'Cash',
   BANK_TRANSFER: 'Bank transfer',
-  CARD: 'Card',
+  CARD: 'Card / POS Terminal',
 }

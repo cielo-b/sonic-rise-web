@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
 import { Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { api, type ProjectStage } from '@/lib/api'
+import { api, type ProjectStage, type Contract } from '@/lib/api'
 import { useAuth } from '@/context/AuthContext'
 import { useRequiredStudio } from '@/context/StudioContext'
 import { formatDateTime, money } from '@/lib/format'
 import { STAGES, STAGE_LABEL } from '@/lib/labels'
-import { Avatar, Badge, Button, Card, Checkbox, ErrorState, Field, Input, Loading, Modal, Select, Textarea, errorMessage } from '@/components/ui'
+import { Avatar, Badge, Button, Card, Checkbox, ConfirmButton, ErrorState, Field, Input, Loading, Modal, Select, Textarea, errorMessage } from '@/components/ui'
 import { BookingPanel } from '@/components/admin/BookingPanel'
+import { ContractModal } from '@/components/ContractModal'
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -19,12 +20,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const { user, can } = useAuth()
   const q = useQuery({ queryKey: ['project', id], queryFn: () => api.projects.get(id) })
   const team = useQuery({ queryKey: ['engineers'], queryFn: api.engineers.list })
+  const contractsQuery = useQuery({ queryKey: ['contracts', id], queryFn: () => api.contracts.list(id) })
   const [note, setNote] = useState('')
   const [shared, setShared] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [newFile, setNewFile] = useState(false)
   const [file, setFile] = useState({ title: '', description: '', price: '0' })
   const [openBooking, setOpenBooking] = useState<string | null>(null)
+  const [openContract, setOpenContract] = useState<Contract | null>(null)
+  const [isCreatingContract, setIsCreatingContract] = useState(false)
 
   if (q.isLoading) return <Loading />
   const p = q.data
@@ -93,6 +97,57 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             </div>
           </section>
 
+          {/* Contracts & Split Sheets */}
+          <section>
+            <div className="flex justify-between items-center mb-3">
+              <h2 className="font-headline font-semibold flex items-center gap-2">
+                Contracts & Split Sheets
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-cyan/20 text-brand-cyan font-mono">
+                  {contractsQuery.data?.length ?? 0}
+                </span>
+              </h2>
+              {write && (
+                <Button variant="glass" onClick={() => setIsCreatingContract(true)}>
+                  <Plus size={14} /> New split sheet
+                </Button>
+              )}
+            </div>
+            {contractsQuery.data?.length === 0 ? (
+              <p className="text-sm text-text-muted">No contracts or split sheets created yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {contractsQuery.data?.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => setOpenContract(c)}
+                    className="w-full glass-card rounded-lg p-4 flex flex-wrap justify-between gap-3 text-left hover:border-brand-cyan/40 transition-colors"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-text-primary">{c.title}</span>
+                        <span className="text-xs text-text-muted">· 🎵 {c.trackTitle}</span>
+                      </div>
+                      <p className="text-xs text-text-muted mt-1">
+                        {c.splits.map((s) => `${s.name} (${s.masterShare}%)`).join(', ')}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                          c.status === 'SIGNED'
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                        }`}
+                      >
+                        {c.status === 'SIGNED' ? 'Fully Signed' : 'Pending Signatures'}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section>
             <h2 className="font-headline font-semibold mb-3">Sessions</h2>
             {p.sessions.length === 0 && <p className="text-sm text-text-muted">Link bookings to this project from the booking’s edit screen.</p>}
@@ -141,9 +196,19 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                     {n.visibleToClient && <span className="chip chip-info">Shared</span>}
                   </p>
                   {(n.author?.id === user?.id || can('staff.manage')) && (
-                    <button aria-label="Delete note" className="text-outline hover:text-red-300" onClick={async () => { await api.projects.deleteNote(n.id); void q.refetch() }}>
-                      <Trash2 size={14} />
-                    </button>
+                    <ConfirmButton
+                      variant="quiet"
+                      size="sm"
+                      title="Delete Session Note"
+                      message="Are you sure you want to delete this session note? This action cannot be undone."
+                      confirmLabel="Delete Note"
+                      onConfirm={async () => {
+                        await api.projects.deleteNote(n.id)
+                        void q.refetch()
+                      }}
+                    >
+                      <Trash2 size={14} className="text-outline hover:text-red-400" />
+                    </ConfirmButton>
                   )}
                 </div>
                 <p className="text-sm mt-2 whitespace-pre-line">{n.body}</p>
@@ -184,6 +249,18 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         <Field label={`Download price (${studio.currency})`} hint="0 = free once the client approves"><Input type="number" min={0} value={file.price} onChange={(e) => setFile({ ...file, price: e.target.value })} /></Field>
       </Modal>
       <BookingPanel id={openBooking} onClose={() => setOpenBooking(null)} />
+      <ContractModal
+        open={isCreatingContract || !!openContract}
+        onClose={() => {
+          setIsCreatingContract(false)
+          setOpenContract(null)
+        }}
+        projectId={id}
+        contract={openContract}
+        onSaved={() => contractsQuery.refetch()}
+        canSign={can('projects.write')}
+        userName={user?.name}
+      />
     </>
   )
 }
